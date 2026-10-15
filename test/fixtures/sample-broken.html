@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- A page with deliberate accessibility mistakes, used to check the scanner finds them.
+     Expected: html-has-lang, image-alt, label, color-contrast, button-name, link-name. -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Sample page with accessibility problems</title>
+</head>
+<body>
+<main>
+  <h1>Joe's Bakery</h1>
+  <img src="cake.jpg" width="200" height="120">
+  <p style="color: #bbbbbb; background: #ffffff">Fresh bread every morning.</p>
+  <form>
+    Email: <input type="email" name="email">
+    <button type="submit"></button>
+  </form>
+  <a href="/menu"><img src="arrow.png"></a>
+</main>
+</body>
+</html>

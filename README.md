@@ -38,7 +38,7 @@ Tech: Node.js + TypeScript, Playwright, axe-core, Vitest. MIT license.
 ### Roadmap for version 1
 
 1. ~~Project skeleton~~
-2. Single-page scan and a readable report
+2. ~~Single-page scan and a readable report~~
 3. Crawling multiple pages
 4. Plain-English explanations for the most common problems
 5. Tests and a GitHub Action
@@ -49,6 +49,16 @@ Requires Node.js 20 or newer.
 
 ```bash
 npm install
+npx playwright install chromium --only-shell
 npm run build
-node dist/cli.js --help
+node dist/cli.js scan https://example.com
 ```
+
+`scan` accepts a full address, a bare domain (`example.com`), or a local HTML file.
+It writes `open-a11y-report/report.html` (open it in any browser) and
+`open-a11y-report/results.json`. Use `--out <folder>` to write somewhere else.
+
+Exit codes: `0` no problems found, `1` problems found, `2` could not scan.
+
+`test/fixtures/sample-broken.html` is a page with deliberate mistakes for trying
+the scanner out.
