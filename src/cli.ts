@@ -7,7 +7,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { scanSite, type SiteScanResult } from "./scan.js";
-import { renderHtmlReport, summarize } from "./report.js";
+import { groupByRule, renderHtmlReport, summarize } from "./report.js";
+import { explain } from "./explanations.js";
 
 const pkg = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -110,9 +111,19 @@ async function runScan(target: string, outDir: string, maxPages: number): Promis
       (s.pagesFailed ? `\n${s.pagesFailed} page(s) could not be opened.` : "") +
       (result.hitLimit
         ? `\nStopped at the ${maxPages}-page limit; use --max-pages to check more.`
-        : "") +
-      `\n\nReport: ${htmlPath}\nData:   ${jsonPath}`,
+        : ""),
   );
+  const problems = groupByRule(result.pages, (p) => p.axe.violations);
+  if (problems.length > 0) {
+    console.log("\nProblems, most serious first:");
+    for (const g of problems) {
+      const title = explain(g.rule.id)?.title ?? g.rule.help;
+      console.log(
+        `  [${g.impact ?? "minor"}] ${title} (${g.elements} element(s) on ${g.pages.length} page(s))`,
+      );
+    }
+  }
+  console.log(`\nReport: ${htmlPath}\nData:   ${jsonPath}`);
   process.exitCode = s.problems > 0 ? 1 : 0;
 }
 

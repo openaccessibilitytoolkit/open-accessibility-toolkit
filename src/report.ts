@@ -6,6 +6,7 @@
 
 import type { ImpactValue, NodeResult, Result } from "axe-core";
 import type { PageResult, SiteScanResult } from "./scan.js";
+import { elementDetail, explain, type Explanation } from "./explanations.js";
 
 type Impact = NonNullable<ImpactValue>;
 
@@ -116,43 +117,65 @@ function selectorFor(node: NodeResult): string {
     .join(" | ");
 }
 
-function renderNode(node: NodeResult): string {
+function renderNode(ruleId: string, node: NodeResult): string {
+  const detail = elementDetail(ruleId, node);
   return `<li>
   <p class="label">Where: <code>${escapeHtml(selectorFor(node))}</code></p>
   <pre tabindex="0"><code>${escapeHtml(node.html)}</code></pre>
-  ${node.failureSummary ? `<p class="why">${escapeHtml(node.failureSummary)}</p>` : ""}
+  ${detail ? `<p>${escapeHtml(detail)}</p>` : ""}
+  ${
+    node.failureSummary
+      ? `<details class="tech"><summary>Technical details from the checker</summary>
+  <p class="why">${escapeHtml(node.failureSummary)}</p></details>`
+      : ""
+  }
 </li>`;
 }
 
-function renderRulePage(page: RuleGroup["pages"][number]): string {
+function renderRulePage(ruleId: string, page: RuleGroup["pages"][number]): string {
   const shown = page.nodes.slice(0, MAX_ELEMENTS_PER_PAGE);
   const hidden = page.nodes.length - shown.length;
   return `<details>
   <summary>${escapeHtml(pageName(page))} (${plural(page.nodes.length, "element")})</summary>
   <p class="meta">Address: <a href="${escapeHtml(page.url)}">${escapeHtml(page.url)}</a></p>
-  <ol>${shown.map(renderNode).join("\n")}</ol>
+  <ol>${shown.map((node) => renderNode(ruleId, node)).join("\n")}</ol>
   ${hidden > 0 ? `<p>And ${plural(hidden, "more element")}. See results.json for the full list.</p>` : ""}
 </details>`;
+}
+
+function renderExplanation(e: Explanation): string {
+  return `<p><strong>What's wrong:</strong> ${escapeHtml(e.problem)}</p>
+  <p><strong>Who it affects:</strong> ${escapeHtml(e.affects)}</p>
+  <p><strong>How to fix it:</strong></p>
+  <ol>${e.fix.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+  <div class="example">
+    <p class="label">Before:</p>
+    <pre tabindex="0"><code>${escapeHtml(e.before)}</code></pre>
+    <p class="label">After:</p>
+    <pre tabindex="0"><code>${escapeHtml(e.after)}</code></pre>
+  </div>`;
 }
 
 function renderProblem(group: RuleGroup): string {
   const { rule } = group;
   const impact = group.impact ?? "minor";
   const criteria = wcagCriteria(rule.tags);
+  const explanation = explain(rule.id);
   const id = `rule-${escapeHtml(rule.id)}`;
   return `<section class="rule" aria-labelledby="${id}">
-  <h3 id="${id}">${escapeHtml(rule.help)}</h3>
+  <h3 id="${id}">${escapeHtml(explanation?.title ?? rule.help)}</h3>
   <p><span class="badge ${impact}">${capitalize(impact)}</span>
     ${criteria.length ? `WCAG ${criteria.map(escapeHtml).join(", ")} &middot; ` : ""}rule <code>${escapeHtml(rule.id)}</code></p>
-  <p>${escapeHtml(rule.description)}</p>
-  <p><a href="${escapeHtml(rule.helpUrl)}">How to fix &ldquo;${escapeHtml(rule.help)}&rdquo; (Deque University)</a></p>
+  ${explanation ? renderExplanation(explanation) : `<p>${escapeHtml(rule.description)}</p>`}
+  <p><a href="${escapeHtml(rule.helpUrl)}">More about &ldquo;${escapeHtml(rule.help)}&rdquo; (Deque University)</a></p>
   <p><strong>Found on ${plural(group.pages.length, "page")}, ${plural(group.elements, "element")} in total.</strong></p>
-  ${group.pages.map(renderRulePage).join("\n")}
+  ${group.pages.map((page) => renderRulePage(rule.id, page)).join("\n")}
 </section>`;
 }
 
 function renderNeedsReview(group: RuleGroup): string {
-  return `<li><a href="${escapeHtml(group.rule.helpUrl)}">${escapeHtml(group.rule.help)}</a>
+  const title = explain(group.rule.id)?.title ?? group.rule.help;
+  return `<li><a href="${escapeHtml(group.rule.helpUrl)}">${escapeHtml(title)}</a>
   (${plural(group.elements, "element")} on ${plural(group.pages.length, "page")})</li>`;
 }
 
@@ -203,6 +226,8 @@ export function renderHtmlReport(result: SiteScanResult): string {
   .label { margin-bottom: 0.25rem; }
   details { margin: 0.5rem 0; }
   details summary { cursor: pointer; font-weight: 600; }
+  details.tech summary { font-weight: normal; color: var(--muted); }
+  .example { border-left: 4px solid var(--border); padding-left: 0.75rem; }
 </style>
 </head>
 <body>
