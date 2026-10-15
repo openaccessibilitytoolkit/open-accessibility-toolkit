@@ -1,0 +1,2 @@
+# Store text files with Unix line endings so the project behaves the same on Windows, Mac and Linux
+* text=auto eol=lf

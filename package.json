@@ -1,0 +1,25 @@
+{
+  "name": "open-a11y",
+  "version": "0.0.1",
+  "description": "Free, open-source tool that helps you find and fix website accessibility issues against WCAG 2.2 AA.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "open-a11y": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
+  }
+}

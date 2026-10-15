@@ -1,0 +1,16 @@
+# Installed packages and build output
+node_modules/
+dist/
+coverage/
+
+# Scan reports generated on your machine
+open-a11y-report/
+
+# Secrets and local settings - never commit these
+.env
+.env.*
+
+# Logs and OS clutter
+*.log
+.DS_Store
+Thumbs.db
