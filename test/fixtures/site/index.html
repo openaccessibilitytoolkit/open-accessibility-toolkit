@@ -1,0 +1,30 @@
+<!doctype html>
+<!-- Sample site for testing the crawler. Every page shares a header whose logo has
+     no alt text, so the report should group that one problem across all 3 pages.
+     The crawler should check index, about and contact; record missing.html as broken;
+     and skip the PDF, the email link, the other site, and the page outside this folder. -->
+<html lang="en">
+<head><meta charset="utf-8"><title>Joe's Bakery: Home</title></head>
+<body>
+<header>
+  <img src="logo.png" width="120" height="40">
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="about.html">About</a>
+    <a href="about.html#team">Our team</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+</header>
+<main>
+  <h1>Welcome to Joe's Bakery</h1>
+  <p>Fresh bread every morning.</p>
+  <ul>
+    <li><a href="menu.pdf">Download our menu (PDF)</a></li>
+    <li><a href="missing.html">Old specials page</a></li>
+    <li><a href="mailto:joe@example.com">Email Joe</a></li>
+    <li><a href="https://example.org/">Our flour supplier</a></li>
+    <li><a href="../sample-broken.html">A page outside this site folder</a></li>
+  </ul>
+</main>
+</body>
+</html>

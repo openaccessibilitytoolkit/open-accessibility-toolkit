@@ -39,7 +39,7 @@ Tech: Node.js + TypeScript, Playwright, axe-core, Vitest. MIT license.
 
 1. ~~Project skeleton~~
 2. ~~Single-page scan and a readable report~~
-3. Crawling multiple pages
+3. ~~Crawling multiple pages~~
 4. Plain-English explanations for the most common problems
 5. Tests and a GitHub Action
 
@@ -55,10 +55,20 @@ node dist/cli.js scan https://example.com
 ```
 
 `scan` accepts a full address, a bare domain (`example.com`), or a local HTML file.
+It checks that page, then follows links to other pages on the same site, up to
+25 pages. Use `--max-pages <n>` to change the limit (`--max-pages 1` checks one page).
+It stays inside the folder you start in: starting at `example.com/blog/` only checks
+pages under `/blog/`, while starting at the home page checks the whole site. It skips
+links to other sites, emails, and files such as PDFs and images.
+
 It writes `open-a11y-report/report.html` (open it in any browser) and
 `open-a11y-report/results.json`. Use `--out <folder>` to write somewhere else.
+The report groups each kind of problem across pages, lists every page checked,
+and lists any links that could not be opened.
 
 Exit codes: `0` no problems found, `1` problems found, `2` could not scan.
 
-`test/fixtures/sample-broken.html` is a page with deliberate mistakes for trying
-the scanner out.
+Sample pages with deliberate mistakes, for trying the scanner out:
+- `test/fixtures/sample-broken.html`: one page.
+- `test/fixtures/site/index.html`: a three-page site with a broken link and links
+  the crawler should skip.
