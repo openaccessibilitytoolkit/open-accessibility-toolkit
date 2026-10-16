@@ -11,11 +11,16 @@ export interface Site {
   phone: string | null;
   /** JSON list of extra addresses to notify about new reports. */
   notify_emails: string;
+  /** Problems the owner knows about, one per line. */
+  known_problems: string;
+  updated_at: string | null;
 }
+
+const SITE_COLUMNS = "id, organization, website, contact_email, reply_days, phone, notify_emails, known_problems, updated_at";
 
 export function getSite(db: D1Database, id: string): Promise<Site | null> {
   return db
-    .prepare("SELECT id, organization, website, contact_email, reply_days, phone, notify_emails FROM sites WHERE id = ?")
+    .prepare(`SELECT ${SITE_COLUMNS} FROM sites WHERE id = ?`)
     .bind(id)
     .first<Site>();
 }
@@ -133,7 +138,7 @@ export async function countByStatus(db: D1Database, siteId?: string): Promise<Re
 
 export async function listSites(db: D1Database): Promise<Site[]> {
   const rows = await db
-    .prepare("SELECT id, organization, website, contact_email, reply_days, phone, notify_emails FROM sites ORDER BY organization")
+    .prepare(`SELECT ${SITE_COLUMNS} FROM sites ORDER BY organization`)
     .all<Site>();
   return rows.results;
 }
@@ -188,5 +193,73 @@ export async function deleteReport(db: D1Database, id: number): Promise<void> {
   await db.batch([
     db.prepare("DELETE FROM report_events WHERE report_id = ?").bind(id),
     db.prepare("DELETE FROM reports WHERE id = ?").bind(id),
+  ]);
+}
+
+// ---- Websites ----
+
+export interface SiteInput {
+  organization: string;
+  website: string;
+  contactEmail: string;
+  replyDays: number;
+  phone: string;
+  notifyEmails: string[];
+  knownProblems: string[];
+}
+
+export async function createSite(db: D1Database, id: string, input: SiteInput, now: Date): Promise<void> {
+  const at = now.toISOString();
+  await db
+    .prepare(
+      `INSERT INTO sites (id, organization, website, contact_email, reply_days, phone, notify_emails, known_problems, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      id,
+      input.organization,
+      input.website,
+      input.contactEmail,
+      input.replyDays,
+      input.phone || null,
+      JSON.stringify(input.notifyEmails),
+      input.knownProblems.join("\n"),
+      at,
+      at,
+    )
+    .run();
+}
+
+export async function updateSite(db: D1Database, id: string, input: SiteInput, now: Date): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE sites SET organization = ?, website = ?, contact_email = ?, reply_days = ?, phone = ?,
+         notify_emails = ?, known_problems = ?, updated_at = ? WHERE id = ?`,
+    )
+    .bind(
+      input.organization,
+      input.website,
+      input.contactEmail,
+      input.replyDays,
+      input.phone || null,
+      JSON.stringify(input.notifyEmails),
+      input.knownProblems.join("\n"),
+      now.toISOString(),
+      id,
+    )
+    .run();
+}
+
+export async function reportCountsBySite(db: D1Database): Promise<Record<string, number>> {
+  const rows = await db.prepare("SELECT site_id, count(*) AS n FROM reports GROUP BY site_id").all<{ site_id: string; n: number }>();
+  return Object.fromEntries(rows.results.map((r) => [r.site_id, r.n]));
+}
+
+/** Deletes a website with all its reports and their timelines. */
+export async function deleteSite(db: D1Database, id: string): Promise<void> {
+  await db.batch([
+    db.prepare("DELETE FROM report_events WHERE report_id IN (SELECT id FROM reports WHERE site_id = ?)").bind(id),
+    db.prepare("DELETE FROM reports WHERE site_id = ?").bind(id),
+    db.prepare("DELETE FROM sites WHERE id = ?").bind(id),
   ]);
 }

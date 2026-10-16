@@ -21,7 +21,12 @@ import { toCsv } from "./csv.js";
 import {
   countByStatus,
   countSubmission,
+  createSite,
   deleteReport,
+  deleteSite,
+  getSite,
+  reportCountsBySite,
+  updateSite,
   getReport,
   listEvents,
   listReports,
@@ -32,6 +37,8 @@ import {
 import { sendLoginEmail } from "./email.js";
 import { Message } from "./pages.js";
 import { visitorKey } from "./safeguards.js";
+import { EMPTY_SITE_FORM, formValuesFromSite, siteIdFor, validateSite } from "./site-form.js";
+import { DeleteSitePage, NewSitePage, SitePage, SitesPage } from "./sites.js";
 import { STATUSES, formatTime, isStatus } from "./timeline.js";
 import { ASSISTIVE_TECH, isEmail, type AssistiveTech } from "./validate.js";
 
@@ -226,6 +233,85 @@ admin.post("/reports/:id/delete", async (c) => {
   if (!report) return c.html(notFound, 404);
   await deleteReport(c.env.DB, report.id);
   return c.redirect(`/admin?deleted=${reference(report.id)}`, 303);
+});
+
+// ---- Websites ----
+
+const siteNotFound = (
+  <Message title="Website not found" link={{ href: "/admin/sites", text: "Back to your websites" }}>
+    That website isn't set up in this portal.
+  </Message>
+);
+
+admin.get("/sites", async (c) => {
+  const [sites, counts] = await Promise.all([listSites(c.env.DB), reportCountsBySite(c.env.DB)]);
+  const deleted = c.req.query("deleted");
+  return c.html(
+    <SitesPage
+      email={c.get("admin")}
+      sites={sites}
+      counts={counts}
+      deleted={deleted && /^[a-z0-9.-]{1,253}$/i.test(deleted) ? deleted : undefined}
+    />,
+  );
+});
+
+admin.get("/sites/new", (c) => c.html(<NewSitePage email={c.get("admin")} values={EMPTY_SITE_FORM} errors={[]} />));
+
+admin.post("/sites", async (c) => {
+  const { values, input, errors } = validateSite(await c.req.parseBody());
+  if (!input) return c.html(<NewSitePage email={c.get("admin")} values={values} errors={errors} />, 400);
+  const id = siteIdFor(input.website);
+  if (await getSite(c.env.DB, id)) {
+    const duplicate = [{ field: "website" as const, message: `${new URL(input.website).host} is already set up in this portal.` }];
+    return c.html(<NewSitePage email={c.get("admin")} values={values} errors={duplicate} />, 400);
+  }
+  await createSite(c.env.DB, id, input, new Date());
+  return c.redirect(`/admin/sites/${id}?saved=1`, 303);
+});
+
+admin.get("/sites/:siteId", async (c) => {
+  const site = await getSite(c.env.DB, c.req.param("siteId"));
+  if (!site) return c.html(siteNotFound, 404);
+  return c.html(
+    <SitePage
+      email={c.get("admin")}
+      site={site}
+      origin={new URL(c.req.url).origin}
+      values={formValuesFromSite(site)}
+      errors={[]}
+      saved={c.req.query("saved") === "1"}
+    />,
+  );
+});
+
+admin.post("/sites/:siteId", async (c) => {
+  const site = await getSite(c.env.DB, c.req.param("siteId"));
+  if (!site) return c.html(siteNotFound, 404);
+  const { values, input, errors } = validateSite(await c.req.parseBody());
+  if (!input) {
+    return c.html(
+      <SitePage email={c.get("admin")} site={site} origin={new URL(c.req.url).origin} values={values} errors={errors} />,
+      400,
+    );
+  }
+  // The website's short name stays the same, so its footer links keep working.
+  await updateSite(c.env.DB, site.id, input, new Date());
+  return c.redirect(`/admin/sites/${site.id}?saved=1`, 303);
+});
+
+admin.get("/sites/:siteId/delete", async (c) => {
+  const site = await getSite(c.env.DB, c.req.param("siteId"));
+  if (!site) return c.html(siteNotFound, 404);
+  const counts = await reportCountsBySite(c.env.DB);
+  return c.html(<DeleteSitePage email={c.get("admin")} site={site} reportCount={counts[site.id] ?? 0} />);
+});
+
+admin.post("/sites/:siteId/delete", async (c) => {
+  const site = await getSite(c.env.DB, c.req.param("siteId"));
+  if (!site) return c.html(siteNotFound, 404);
+  await deleteSite(c.env.DB, site.id);
+  return c.redirect(`/admin/sites?deleted=${encodeURIComponent(new URL(site.website).host)}`, 303);
 });
 
 export default admin;

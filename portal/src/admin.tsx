@@ -11,6 +11,7 @@ function AdminHeader(props: { email: string }) {
     <header class="site-header">
       <nav aria-label="Portal">
         <a href="/admin">Reports</a>
+        <a href="/admin/sites">Websites</a>
         <a href="/admin/reports.csv">Download spreadsheet</a>
         <span class="who">Logged in as {props.email}</span>
         <form method="post" action="/admin/logout">
@@ -23,7 +24,7 @@ function AdminHeader(props: { email: string }) {
   );
 }
 
-function AdminLayout(props: { title: string; email: string; children: Child }) {
+export function AdminLayout(props: { title: string; email: string; children: Child }) {
   return (
     <Layout title={`${props.title} - Accessibility portal`} header={<AdminHeader email={props.email} />} wide>
       {props.children}
@@ -158,7 +159,12 @@ export function InboxPage(props: {
         <button type="submit">Show reports</button>
       </form>
 
-      {reports.length === 0 ? (
+      {sites.length === 0 ? (
+        <p>
+          You haven't added a website yet. <a href="/admin/sites/new">Add your first website</a> to get your report form
+          and accessibility statement.
+        </p>
+      ) : reports.length === 0 ? (
         <p>No reports match. When visitors report a problem, it will appear here.</p>
       ) : (
         <table>

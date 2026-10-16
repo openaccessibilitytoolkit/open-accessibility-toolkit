@@ -8,9 +8,10 @@ else sees the reports.
 The portal records and organizes reports. It does not make a website "compliant";
 fixing the website does that.
 
-**Status:** early. The report form, emails, your login and inbox work. Coming next:
-managing your websites in the portal, and a step-by-step setup guide for people who
-don't code.
+**Status:** early. All the main pieces work on your computer: the report form, emails,
+your login and inbox, your websites, the public accessibility statement, and footer
+links. Coming next: a step-by-step guide to put your own copy on Cloudflare, for people
+who don't code.
 
 ## What works so far
 
@@ -42,6 +43,17 @@ don't code.
   status and filters by website and status.
 - **Each report's page:** everything the visitor sent, a status (New, In progress,
   Fixed), notes, and a timeline of what happened, when, and who did it.
+- **Your websites** at `/admin/sites`: add, edit or delete websites. Each one has its
+  contact email, reply time, optional phone, extra people to email about new reports,
+  and problems you already know about. Deleting a website also deletes its reports,
+  after a clear warning.
+- **A public accessibility statement** for each website at `/statement/<website-id>`.
+  It uses the structure W3C recommends, always says "partially conforms" (never
+  "compliant"), lists your known problems, links to the report form, and updates the
+  moment you change your settings.
+- **Footer links ready to copy** on each website's page ("Accessibility statement" and
+  "Report an accessibility problem"), with steps for WordPress, Squarespace, Wix and
+  Shopify. Plain links only: no widget, no script.
 - **Delete** a report and its timeline permanently, after an "Are you sure?" page.
 - **Download a spreadsheet** (CSV) of all reports. Cells that start like a formula are
   made safe, so a visitor's text can't run as a formula in Excel.

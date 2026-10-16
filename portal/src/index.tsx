@@ -8,6 +8,7 @@ import { countSubmission, createReport, getSite, reference } from "./db.js";
 import { emailNewReport } from "./email.js";
 import { Message, ReportForm, ThankYou } from "./pages.js";
 import { RATE_LIMIT, looksAutomated, visitorKey } from "./safeguards.js";
+import { StatementPage } from "./statement.js";
 import { validateReport } from "./validate.js";
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -85,6 +86,12 @@ app.get("/report/:siteId/thanks", async (c) => {
   if (!site) return c.html(<Message title="Page not found">We couldn't find that page.</Message>, 404);
   const ref = c.req.query("ref");
   return c.html(<ThankYou site={site} reference={ref && /^R-\d{4,}$/.test(ref) ? ref : undefined} />);
+});
+
+app.get("/statement/:siteId", async (c) => {
+  const site = await getSite(c.env.DB, c.req.param("siteId"));
+  if (!site) return c.html(<Message title="Page not found">We couldn't find that accessibility statement.</Message>, 404);
+  return c.html(<StatementPage site={site} timeZone={c.env.TIME_ZONE} />);
 });
 
 app.route("/admin", admin);
