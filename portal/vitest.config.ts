@@ -1,0 +1,21 @@
+// Tests run inside Cloudflare's real Workers runtime, on this computer, with a
+// local database that is set up fresh from the migrations.
+
+import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
+import { defineConfig } from "vitest/config";
+
+export default defineConfig(async () => {
+  const migrations = await readD1Migrations("./migrations");
+  return {
+    plugins: [
+      cloudflareTest({
+        wrangler: { configPath: "./wrangler.jsonc" },
+        miniflare: { bindings: { TEST_MIGRATIONS: migrations } },
+      }),
+    ],
+    test: {
+      include: ["test/**/*.test.ts"],
+      setupFiles: ["./test/apply-migrations.ts"],
+    },
+  };
+});

@@ -108,7 +108,7 @@ changes the saved answers.
 ## What's next (planned)
 
 1. Progress history: what got fixed and what's new since the last scan.
-2. A free, self-hosted portal on Cloudflare: a report-a-problem form with an automatic
+2. A free, self-hosted portal on Cloudflare (started in `portal/`; the report form works): a report-a-problem form with an automatic
    reply, an email to the owner, and an inbox of reports with dates and status.
 3. A step-by-step setup guide for people who don't code.
 

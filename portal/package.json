@@ -1,0 +1,25 @@
+{
+  "name": "open-a11y-portal",
+  "version": "0.1.0",
+  "description": "Free, self-hosted portal for accessibility problem reports. Runs on Cloudflare Workers and D1.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "db:local": "wrangler d1 migrations apply DB --local && wrangler d1 execute DB --local --file seed/dev.sql",
+    "types": "wrangler types",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "hono": "^4.13.13"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.4.4",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.151.1"
+  }
+}

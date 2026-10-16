@@ -18,3 +18,11 @@ Thumbs.db
 # Statement settings and output when trying the tool in this folder
 open-a11y.config.json
 open-a11y-statement/
+
+# Cloudflare local development files
+.wrangler/
+.dev.vars
+portal/worker-configuration.d.ts
+
+# Local Claude app settings
+.claude/

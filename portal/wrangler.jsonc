@@ -1,0 +1,22 @@
+// Cloudflare settings for the portal. See README.md in this folder.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "open-a11y-portal",
+  "main": "src/index.tsx",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "open-a11y-portal",
+      // Replaced with your real database id when you set up the portal on Cloudflare.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // Mixed into visitor IP addresses before they are hashed for rate limiting.
+    // Set a long random value as a secret when deploying: wrangler secret put HASH_SALT
+    "HASH_SALT": "local-development-only"
+  }
+}
