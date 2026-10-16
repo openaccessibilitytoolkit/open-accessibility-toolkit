@@ -41,11 +41,11 @@ Tech: Node.js + TypeScript, Playwright, axe-core, Vitest. MIT license.
 2. ~~Single-page scan and a readable report~~
 3. ~~Crawling multiple pages~~
 4. ~~Plain-English explanations for the most common problems~~
-5. Tests and a GitHub Action
+5. ~~Tests and a GitHub Action~~
 
 ## Development
 
-Requires Node.js 20 or newer.
+Requires Node.js 22.12 or newer.
 
 ```bash
 npm install
@@ -62,7 +62,8 @@ pages under `/blog/`, while starting at the home page checks the whole site. It 
 links to other sites, emails, and files such as PDFs and images.
 
 It writes `open-a11y-report/report.html` (open it in any browser) and
-`open-a11y-report/results.json`. Use `--out <folder>` to write somewhere else.
+`open-a11y-report/results.json`, plus a short `summary.md`. Use `--out <folder>` to write
+somewhere else.
 The report groups each kind of problem across pages, lists every page checked,
 and lists any links that could not be opened.
 
@@ -78,3 +79,53 @@ Sample pages with deliberate mistakes, for trying the scanner out:
 - `test/fixtures/sample-broken.html`: one page.
 - `test/fixtures/site/index.html`: a three-page site with a broken link and links
   the crawler should skip.
+
+## Tests
+
+```bash
+npm test
+```
+
+This builds the project, then runs:
+- quick tests of the building blocks: link following, report wording, HTML safety,
+  and the explanations;
+- end-to-end tests that open the sample pages in the hidden browser, check that every
+  planted mistake is found, and check that the report passes its own accessibility scan.
+
+GitHub runs the same tests on every change (`.github/workflows/ci.yml`) on Linux and
+Windows, and tries the GitHub Action on the sample site.
+
+## Use it on GitHub (free)
+
+Add this file to your website's repository as `.github/workflows/accessibility.yml`.
+It scans your site every Monday, and whenever you press "Run workflow" on the Actions tab:
+
+```yaml
+name: Accessibility scan
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: openaccessibilitytoolkit/open-accessibility-toolkit@main
+        with:
+          url: https://www.example.com
+          max-pages: 25
+```
+
+Each run shows a summary table on its page, with the full report attached to download.
+
+Options:
+- `url` (required): the address to start from, or an HTML file in your repository.
+- `max-pages`: the most pages to check (default `25`).
+- `fail-on-problems`: set to `"true"` to mark the run as failed when problems are found,
+  so new problems can't slip in unnoticed (default `"false"`).
+- `report-name`: name of the attached report (default `accessibility-report`).
+
+Outputs: `problems`, `elements` and `pages`, for use in later steps.
+
+The action sets up Node.js 24 for the rest of the job.

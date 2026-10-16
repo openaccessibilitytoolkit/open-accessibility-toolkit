@@ -12,15 +12,18 @@
     "dist"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12"
   },
   "scripts": {
     "build": "tsc",
+    "pretest": "tsc",
+    "test": "vitest run",
     "start": "node dist/cli.js"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.14.0",

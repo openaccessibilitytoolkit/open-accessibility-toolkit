@@ -1,0 +1,94 @@
+# A reusable GitHub Action, so anyone can scan their site for free on GitHub.
+# See "Use it on GitHub" in README.md for an example workflow.
+
+name: Open Accessibility Toolkit scan
+description: >
+  Helps you find and fix website accessibility issues against WCAG 2.2 AA.
+  Writes a report with plain-English explanations and example fixes.
+author: openaccessibilitytoolkit
+branding:
+  icon: eye
+  color: blue
+
+inputs:
+  url:
+    description: The web address to start scanning from, or an HTML file in your repository.
+    required: true
+  max-pages:
+    description: The most pages to check.
+    required: false
+    default: "25"
+  fail-on-problems:
+    description: Set to "true" to mark the run as failed when problems are found.
+    required: false
+    default: "false"
+  report-name:
+    description: Name of the downloadable report attached to the run.
+    required: false
+    default: accessibility-report
+
+outputs:
+  problems:
+    description: Number of kinds of problem found.
+    value: ${{ steps.scan.outputs.problems }}
+  elements:
+    description: Number of page elements affected.
+    value: ${{ steps.scan.outputs.elements }}
+  pages:
+    description: Number of pages checked.
+    value: ${{ steps.scan.outputs.pages }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v5
+      with:
+        node-version: 24
+
+    - name: Install the scanner
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        npm ci --no-audit --no-fund
+        npm run build
+        npx playwright install --with-deps chromium --only-shell
+
+    - name: Scan for accessibility problems
+      id: scan
+      shell: bash
+      env:
+        INPUT_URL: ${{ inputs.url }}
+        INPUT_MAX_PAGES: ${{ inputs.max-pages }}
+        ACTION_PATH: ${{ github.action_path }}
+        OUT_DIR: ${{ runner.temp }}/open-a11y-report
+      run: |
+        set +e
+        node "$ACTION_PATH/dist/cli.js" scan "$INPUT_URL" --max-pages "$INPUT_MAX_PAGES" --out "$OUT_DIR"
+        code=$?
+        set -e
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        if [ "$code" -eq 2 ]; then
+          echo "::error::The scan could not run. See the messages above."
+          exit 1
+        fi
+        cat "$OUT_DIR/summary.md" >> "$GITHUB_STEP_SUMMARY"
+        for field in problems elements; do
+          echo "$field=$(node -p "require(process.argv[1]).summary.$field" "$OUT_DIR/results.json")" >> "$GITHUB_OUTPUT"
+        done
+        echo "pages=$(node -p "require(process.argv[1]).summary.pagesScanned" "$OUT_DIR/results.json")" >> "$GITHUB_OUTPUT"
+
+    - name: Attach the report to this run
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.report-name }}
+        path: ${{ runner.temp }}/open-a11y-report
+        if-no-files-found: ignore
+
+    - name: Fail if problems were found
+      if: inputs.fail-on-problems == 'true' && steps.scan.outputs.exit-code == '1'
+      shell: bash
+      run: |
+        echo "::error::Accessibility problems were found. Download the report attached to this run for explanations and fixes."
+        exit 1

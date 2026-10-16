@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 // Entry point for the `open-a11y` command.
 
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { scanSite, type SiteScanResult } from "./scan.js";
 import { groupByRule, renderHtmlReport, summarize } from "./report.js";
+import { renderMarkdownSummary } from "./summary.js";
 import { explain } from "./explanations.js";
+import { toScanUrl } from "./url.js";
 
 const pkg = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -32,13 +33,6 @@ Options:
 
 Exit codes: 0 no problems found, 1 problems found, 2 could not scan.
 `;
-
-/** Accepts a full address, a bare domain like example.com, or a local HTML file. */
-export function toScanUrl(input: string): string {
-  if (/^(https?|file):/i.test(input)) return new URL(input).href;
-  if (existsSync(input)) return pathToFileURL(path.resolve(input)).href;
-  return new URL(`https://${input}`).href;
-}
 
 function fail(message: string): never {
   console.error(message);
@@ -96,9 +90,11 @@ async function runScan(target: string, outDir: string, maxPages: number): Promis
   const htmlPath = path.resolve(outDir, "report.html");
   const jsonPath = path.resolve(outDir, "results.json");
   await writeFile(htmlPath, renderHtmlReport(result), "utf8");
-  await writeFile(jsonPath, JSON.stringify(result, null, 2), "utf8");
-
   const s = summarize(result);
+  await writeFile(jsonPath, JSON.stringify({ summary: s, ...result }, null, 2), "utf8");
+  // A short Markdown version, shown on the GitHub Actions run page.
+  await writeFile(path.resolve(outDir, "summary.md"), renderMarkdownSummary(result), "utf8");
+
   const impacts = Object.entries(s.byImpact)
     .filter(([, n]) => n > 0)
     .map(([impact, n]) => `${n} ${impact}`)
