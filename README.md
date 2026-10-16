@@ -108,7 +108,7 @@ changes the saved answers.
 ## What's next (planned)
 
 1. Progress history: what got fixed and what's new since the last scan.
-2. A free, self-hosted portal on Cloudflare (in `portal/`; works on your computer: report form, emails, login, inbox, websites, statement and footer links): a report-a-problem form with an automatic
+2. A free, self-hosted portal on Cloudflare (in `portal/`; [live demo](https://open-a11y-portal.openaccessibilitytoolkit.workers.dev/report/joesbakery-example): report form, emails, login, inbox, websites, statement and footer links): a report-a-problem form with an automatic
    reply, an email to the owner, and an inbox of reports with dates and status.
 3. A step-by-step setup guide for people who don't code.
 

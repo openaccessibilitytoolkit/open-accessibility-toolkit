@@ -8,10 +8,14 @@ else sees the reports.
 The portal records and organizes reports. It does not make a website "compliant";
 fixing the website does that.
 
-**Status:** early. All the main pieces work on your computer: the report form, emails,
-your login and inbox, your websites, the public accessibility statement, and footer
-links. Coming next: a step-by-step guide to put your own copy on Cloudflare, for people
-who don't code.
+**Status:** early, and live. All the main pieces work: the report form, emails, your login
+and inbox, your websites, the public accessibility statement, and footer links. Coming
+next: a one-click "Deploy to Cloudflare" button and a step-by-step guide for people who
+don't code.
+
+**Live demo:** the [report form](https://open-a11y-portal.openaccessibilitytoolkit.workers.dev/report/joesbakery-example)
+and [accessibility statement](https://open-a11y-portal.openaccessibilitytoolkit.workers.dev/statement/joesbakery-example)
+for a pretend bakery. Reports sent there reach the project team; please only send test reports.
 
 ## What works so far
 
@@ -78,10 +82,10 @@ Then open http://localhost:8787/report/joesbakery-com (a demo website added by
 
 ### Settings
 
-In `wrangler.jsonc` under `vars`: `ADMIN_EMAILS` (who can log in, separated by commas),
-`TIME_ZONE` (for example `America/Chicago`), and `EMAIL_FROM`. Secrets go in
-`.dev.vars` on your computer, or `wrangler secret put` on Cloudflare: `RESEND_API_KEY`
-and `HASH_SALT`.
+In `wrangler.jsonc` under `vars`: `TIME_ZONE` (for example `America/Chicago`) and
+`EMAIL_FROM`. Private settings go in `.dev.vars` on your computer (copy
+`.dev.vars.example`), or `wrangler secret put` on Cloudflare: `ADMIN_EMAILS` (who can
+log in, separated by commas), `HASH_SALT` (long random text) and `RESEND_API_KEY`.
 
 ### Sending real emails on your computer
 
@@ -93,6 +97,26 @@ and `HASH_SALT`.
 Without your own domain verified in Resend, emails come from `onboarding@resend.dev` and
 only reach your own Resend account's address. Anything else is recorded in the timeline
 as a failed email.
+
+## Put your own copy on Cloudflare (command line)
+
+For developers. A step-by-step guide for everyone else is coming.
+
+1. Sign in to Cloudflare: `npx wrangler login`. On Windows, if the browser can't reach
+   `localhost` afterwards, use `npx wrangler login --device` instead. If PowerShell
+   blocks `npx`, type `npx.cmd`.
+2. Publish, which also creates the database and its tables: `npm run deploy`
+3. Store the private settings (each command asks you to paste the value):
+   ```bash
+   npx wrangler secret put ADMIN_EMAILS
+   npx wrangler secret put HASH_SALT
+   npx wrangler secret put RESEND_API_KEY
+   ```
+   `HASH_SALT` is any long random text. Until it's set, the portal shows "This portal
+   isn't set up yet" instead of storing visitors' details unprotected.
+4. Optional: change `EMAIL_FROM` and `TIME_ZONE` in `wrangler.jsonc`, then publish again.
+5. Go to `https://<your-portal>.workers.dev/admin`, log in, and add your website under
+   **Websites**.
 
 ## Tests
 

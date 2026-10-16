@@ -11,7 +11,7 @@
     "types": "wrangler types",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy && wrangler d1 migrations apply DB --remote"
   },
   "dependencies": {
     "hono": "^4.13.13"
@@ -21,5 +21,24 @@
     "typescript": "^7.0.2",
     "vitest": "^5.0.5",
     "wrangler": "^4.151.1"
+  },
+  "cloudflare": {
+    "bindings": {
+      "ADMIN_EMAILS": {
+        "description": "Email addresses that can log in to your portal, separated by commas. For example: you@yourbusiness.com"
+      },
+      "HASH_SALT": {
+        "description": "Any long random text (32 characters or more). It scrambles visitors' addresses before they're stored."
+      },
+      "RESEND_API_KEY": {
+        "description": "Your Resend API key with 'Sending access' only. Create one at resend.com, under API Keys."
+      },
+      "EMAIL_FROM": {
+        "description": "Who emails come from, like: Joe's Bakery <accessibility@joesbakery.com>. The address must use a domain you've verified in Resend."
+      },
+      "TIME_ZONE": {
+        "description": "Your time zone, like America/New_York or Europe/London. Times in the portal use it."
+      }
+    }
   }
 }

@@ -24,7 +24,8 @@ type SendResult = { ok: true } | { ok: false; error: string };
 
 export interface EmailEnv {
   DB: D1Database;
-  HASH_SALT: string;
+  /** Always set: the portal refuses to run without it (see missingSettings). */
+  HASH_SALT?: string;
   EMAIL_FROM: string;
   TIME_ZONE: string;
   RESEND_API_KEY?: string;
@@ -191,7 +192,7 @@ async function sentToday(db: D1Database, day: string): Promise<number> {
 
 /** True the first time today this address asks for an auto-reply. */
 async function firstAutoReplyToday(env: EmailEnv, visitorEmail: string, day: string): Promise<boolean> {
-  const hash = await visitorKey(visitorEmail.toLowerCase(), "auto-reply", env.HASH_SALT);
+  const hash = await visitorKey(visitorEmail.toLowerCase(), "auto-reply", env.HASH_SALT!);
   const result = await env.DB.prepare("INSERT OR IGNORE INTO auto_replies (email_hash, day) VALUES (?, ?)")
     .bind(hash, day)
     .run();

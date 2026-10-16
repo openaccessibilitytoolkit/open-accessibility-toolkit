@@ -69,7 +69,7 @@ admin.post("/login", async (c) => {
   }
   const now = Date.now();
   const ip = c.req.header("CF-Connecting-IP") ?? "unknown";
-  const requests = await countSubmission(c.env.DB, await visitorKey(ip, "login", c.env.HASH_SALT), now, HOUR);
+  const requests = await countSubmission(c.env.DB, await visitorKey(ip, "login", c.env.HASH_SALT!), now, HOUR);
   // The answer is the same whether or not the address can log in, so nobody can find out who the admins are.
   if (requests <= LOGIN_REQUESTS_PER_HOUR && isAdmin(c.env.ADMIN_EMAILS, email)) {
     const token = await createLoginToken(c.env.DB, email, now);

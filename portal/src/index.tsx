@@ -3,7 +3,7 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import admin from "./admin-routes.js";
-import type { Bindings } from "./bindings.js";
+import { missingSettings, type Bindings } from "./bindings.js";
 import { countSubmission, createReport, getSite, reference } from "./db.js";
 import { emailNewReport } from "./email.js";
 import { Message, ReportForm, ThankYou } from "./pages.js";
@@ -22,6 +22,20 @@ app.use(async (c, next) => {
   );
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Referrer-Policy", "same-origin");
+});
+
+// A portal without its private settings can't protect visitors' privacy, so it stops
+// with a clear message instead of quietly misbehaving.
+app.use(async (c, next) => {
+  const missing = missingSettings(c.env);
+  if (missing.length === 0) return next();
+  console.error(`The portal is missing these private settings: ${missing.join(", ")}`);
+  return c.html(
+    <Message title="This portal isn't set up yet">
+      {`The portal's owner needs to finish setting it up. Missing setting: ${missing.join(", ")}.`}
+    </Message>,
+    503,
+  );
 });
 
 app.get("/", (c) =>
@@ -55,7 +69,7 @@ app.post("/report/:siteId", bodyLimit({ maxSize: 32 * 1024 }), async (c) => {
   const ip = c.req.header("CF-Connecting-IP") ?? "unknown";
   const count = await countSubmission(
     c.env.DB,
-    await visitorKey(ip, site.id, c.env.HASH_SALT),
+    await visitorKey(ip, site.id, c.env.HASH_SALT!), // checked by the setup check above
     now,
     RATE_LIMIT.windowMs,
   );

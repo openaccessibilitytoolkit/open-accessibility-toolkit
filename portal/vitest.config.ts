@@ -15,6 +15,7 @@ export default defineConfig(async () => {
             TEST_MIGRATIONS: migrations,
             // Tests must never send real emails, even if .dev.vars holds a real key.
             RESEND_API_KEY: "",
+            HASH_SALT: "test-salt-that-is-long-enough",
             ADMIN_EMAILS: "owner@joesbakery.com, Second@Example.com",
             TIME_ZONE: "America/New_York",
           },

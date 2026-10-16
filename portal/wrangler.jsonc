@@ -9,22 +9,18 @@
     {
       "binding": "DB",
       "database_name": "open-a11y-portal",
-      // Replaced with your real database id when you set up the portal on Cloudflare.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // No database id here: Cloudflare creates the database the first time you
+      // publish, and keeps using it after that.
       "migrations_dir": "migrations"
     }
   ],
   "vars": {
-    // Mixed into visitor IP addresses before they are hashed for rate limiting.
-    // Set a long random value as a secret when deploying: wrangler secret put HASH_SALT
-    "HASH_SALT": "local-development-only",
-    // Who emails come from. Without your own domain, Resend only delivers emails
-    // from onboarding@resend.dev to your own Resend account's address.
+    // Who emails come from. Without your own domain verified in Resend, emails from
+    // onboarding@resend.dev only reach your own Resend account's address.
     "EMAIL_FROM": "Accessibility reports <onboarding@resend.dev>",
-    // Who can log in, separated by commas. Set this when you set up the portal.
-    "ADMIN_EMAILS": "",
     // Times in the portal and emails are shown in this time zone.
     "TIME_ZONE": "America/New_York"
   }
-  // Secret, never written here: RESEND_API_KEY (see README.md).
+  // Private settings are never written here. They're listed in .dev.vars.example:
+  // ADMIN_EMAILS, HASH_SALT and RESEND_API_KEY.
 }

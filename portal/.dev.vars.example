@@ -1,6 +1,13 @@
-# Copy this file to .dev.vars (which is never committed) to send real emails
-# while trying the portal on your computer. Use a Resend key with "Sending access" only.
-RESEND_API_KEY=re_your_key_here
+# The portal's private settings. On Cloudflare they're stored as secrets. To try the
+# portal on your computer, copy this file to .dev.vars (which is never committed).
 
-# Who can log in on this computer, separated by commas
+# Who can log in, separated by commas.
 ADMIN_EMAILS=you@example.com
+
+# A long random value used to scramble visitors' IP and email addresses before they
+# are stored, so the real addresses are never kept. Any random text of 32+ characters.
+HASH_SALT=replace-with-a-long-random-value
+
+# Your Resend API key, with "Sending access" only. Without it, reports are still saved
+# but no emails are sent.
+RESEND_API_KEY=re_your_key_here
