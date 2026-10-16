@@ -80,6 +80,38 @@ Sample pages with deliberate mistakes, for trying the scanner out:
 - `test/fixtures/site/index.html`: a three-page site with a broken link and links
   the crawler should skip.
 
+## Accessibility statement and footer links
+
+```bash
+node dist/cli.js statement
+```
+
+The first time, it asks a few questions: your organization's name, website, a contact
+email, how many working days you take to reply, and optionally a phone number and a
+report-a-problem page. The answers are saved in `open-a11y.config.json`, so it only asks
+once. It writes four files to `open-a11y-statement/<website>/`:
+
+- `statement.html`: the statement as a web page, ready to upload.
+- `statement.md`: the same text, to paste into a website builder.
+- `footer.html`: two plain links for your footer, "Accessibility statement" and
+  "Report an accessibility problem" (email for now; your portal's form once you have one).
+- `instructions.md`: how to add them in WordPress, Squarespace, Wix or Shopify.
+
+The statement follows the structure W3C recommends. If `open-a11y-report/results.json`
+holds a scan of the same website, its problems are listed in plain English under
+"Problems we know about". The statement always says the site **partially conforms**:
+automated checks can't prove full conformance, so the tool never claims it.
+
+More than one website: `--new` sets up another, `--site <name>` picks one, and `--edit`
+changes the saved answers.
+
+## What's next (planned)
+
+1. Progress history: what got fixed and what's new since the last scan.
+2. A free, self-hosted portal on Cloudflare: a report-a-problem form with an automatic
+   reply, an email to the owner, and an inbox of reports with dates and status.
+3. A step-by-step setup guide for people who don't code.
+
 ## Tests
 
 ```bash

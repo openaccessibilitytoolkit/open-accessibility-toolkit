@@ -6,7 +6,7 @@ import { groupByRule, summarize, wcagCriteria } from "./report.js";
 import type { SiteScanResult } from "./scan.js";
 
 /** Stops page text such as titles from breaking the Markdown table or adding links. */
-function escapeMarkdown(text: string): string {
+export function escapeMarkdown(text: string): string {
   return text.replace(/[\\`*_[\]<>|]/g, (c) => `\\${c}`).replace(/\s+/g, " ").trim();
 }
 

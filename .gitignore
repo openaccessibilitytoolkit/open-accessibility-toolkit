@@ -14,3 +14,7 @@ open-a11y-report/
 *.log
 .DS_Store
 Thumbs.db
+
+# Statement settings and output when trying the tool in this folder
+open-a11y.config.json
+open-a11y-statement/
