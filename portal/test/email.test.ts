@@ -124,7 +124,12 @@ describe("emailNewReport", () => {
 
   afterEach(() => vi.restoreAllMocks());
 
-  const emailEnv = (key = "re_test") => ({ ...env, RESEND_API_KEY: key });
+  const emailEnv = (key = "re_test") => ({
+    ...env,
+    RESEND_API_KEY: key,
+    EMAIL_FROM: "Accessibility reports <onboarding@resend.dev>",
+    TIME_ZONE: "America/New_York",
+  });
 
   async function newReport(email = "visitor@example.com"): Promise<number> {
     const row = await env.DB.prepare(

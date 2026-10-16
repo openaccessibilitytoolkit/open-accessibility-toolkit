@@ -18,6 +18,7 @@ export default defineConfig(async () => {
             HASH_SALT: "test-salt-that-is-long-enough",
             ADMIN_EMAILS: "owner@joesbakery.com, Second@Example.com",
             TIME_ZONE: "America/New_York",
+            EMAIL_FROM: "Accessibility reports <onboarding@resend.dev>",
           },
         },
       }),

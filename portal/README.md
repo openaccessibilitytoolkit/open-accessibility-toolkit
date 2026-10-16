@@ -8,10 +8,14 @@ else sees the reports.
 The portal records and organizes reports. It does not make a website "compliant";
 fixing the website does that.
 
-**Status:** early, and live. All the main pieces work: the report form, emails, your login
-and inbox, your websites, the public accessibility statement, and footer links. Coming
-next: a one-click "Deploy to Cloudflare" button and a step-by-step guide for people who
-don't code.
+## Get your own portal (free)
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit/tree/main/portal)
+
+New to this? Follow the **[step-by-step setup guide](https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit/blob/main/docs/setup-guide.md)**.
+No coding needed: three free accounts, one button, about 30 minutes.
+
+**Status:** early, and live.
 
 **Live demo:** the [report form](https://open-a11y-portal.openaccessibilitytoolkit.workers.dev/report/joesbakery-example)
 and [accessibility statement](https://open-a11y-portal.openaccessibilitytoolkit.workers.dev/statement/joesbakery-example)
@@ -62,6 +66,12 @@ for a pretend bakery. Reports sent there reach the project team; please only sen
 - **Download a spreadsheet** (CSV) of all reports. Cells that start like a formula are
   made safe, so a visitor's text can't run as a formula in Excel.
 - Times are shown in the `TIME_ZONE` you choose (default: US Eastern).
+- **Check my setup** at `/admin/setup`: plain "Done" / "Needs attention" checks for login,
+  email, the sending address, websites and time zone, a **Send me a test email** button
+  that explains Resend errors in plain words, and a check that your footer links are
+  really on each website's home page.
+- **No privacy key to invent:** the portal creates its own random key the first time it
+  runs and keeps it in its database. (A `HASH_SALT` secret overrides it if you set one.)
 - No JavaScript, strict security headers, and every page passes the toolkit's own
   WCAG 2.2 AA scan, including the error state.
 
@@ -82,10 +92,11 @@ Then open http://localhost:8787/report/joesbakery-com (a demo website added by
 
 ### Settings
 
-In `wrangler.jsonc` under `vars`: `TIME_ZONE` (for example `America/Chicago`) and
-`EMAIL_FROM`. Private settings go in `.dev.vars` on your computer (copy
-`.dev.vars.example`), or `wrangler secret put` on Cloudflare: `ADMIN_EMAILS` (who can
-log in, separated by commas), `HASH_SALT` (long random text) and `RESEND_API_KEY`.
+All settings are private settings, explained in `.dev.vars.example`: `ADMIN_EMAILS` (who
+can log in, separated by commas), `RESEND_API_KEY`, `EMAIL_FROM` (default: Resend's test
+address) and `TIME_ZONE` (default: `America/New_York`). On your computer, put them in
+`.dev.vars`. On Cloudflare, set them under your Worker's **Settings**, **Variables and
+Secrets** (or with `wrangler secret put`). Publishing an update never overwrites them.
 
 ### Sending real emails on your computer
 
@@ -109,12 +120,9 @@ For developers. A step-by-step guide for everyone else is coming.
 3. Store the private settings (each command asks you to paste the value):
    ```bash
    npx wrangler secret put ADMIN_EMAILS
-   npx wrangler secret put HASH_SALT
    npx wrangler secret put RESEND_API_KEY
    ```
-   `HASH_SALT` is any long random text. Until it's set, the portal shows "This portal
-   isn't set up yet" instead of storing visitors' details unprotected.
-4. Optional: change `EMAIL_FROM` and `TIME_ZONE` in `wrangler.jsonc`, then publish again.
+4. Optional: `npx wrangler secret put EMAIL_FROM` and `npx wrangler secret put TIME_ZONE`.
 5. Go to `https://<your-portal>.workers.dev/admin`, log in, and add your website under
    **Websites**.
 

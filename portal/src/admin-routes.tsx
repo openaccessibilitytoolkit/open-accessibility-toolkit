@@ -7,6 +7,7 @@ import { csrf } from "hono/csrf";
 import { DeletePage, InboxPage, LoginPage, ReportPage, VerifyPage } from "./admin.js";
 import {
   LOGIN_LINK_MINUTES,
+  adminEmails,
   SESSION_COOKIE,
   SESSION_DAYS,
   consumeLoginToken,
@@ -34,7 +35,8 @@ import {
   reference,
   updateReport,
 } from "./db.js";
-import { sendLoginEmail } from "./email.js";
+import { sendLoginEmail, sendTestEmail, type TestEmailResult } from "./email.js";
+import { SETUP_GUIDE_URL, SetupPage, checkFooterLinks, type Check } from "./setup-page.js";
 import { Message } from "./pages.js";
 import { visitorKey } from "./safeguards.js";
 import { EMPTY_SITE_FORM, formValuesFromSite, siteIdFor, validateSite } from "./site-form.js";
@@ -312,6 +314,81 @@ admin.post("/sites/:siteId/delete", async (c) => {
   if (!site) return c.html(siteNotFound, 404);
   await deleteSite(c.env.DB, site.id);
   return c.redirect(`/admin/sites?deleted=${encodeURIComponent(new URL(site.website).host)}`, 303);
+});
+
+// ---- Check my setup ----
+
+function validTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function setupPage(c: { env: Bindings; req: { url: string } }, adminEmail: string, testResult?: TestEmailResult) {
+  const env = c.env;
+  const origin = new URL(c.req.url).origin;
+  const sites = await listSites(env.DB);
+  const admins = adminEmails(env.ADMIN_EMAILS);
+  const fromAddress = /<([^>]+)>/.exec(env.EMAIL_FROM)?.[1] ?? env.EMAIL_FROM;
+  const fromDomain = fromAddress.split("@")[1] ?? "";
+  const checks: Check[] = [
+    {
+      state: "done",
+      title: "You can log in",
+      detail: `People who can log in: ${admins.join(", ")}. To change this, update ADMIN_EMAILS in Cloudflare.`,
+    },
+    env.RESEND_API_KEY
+      ? { state: "done", title: "Email is connected", detail: "New reports are emailed to you, and visitors get a confirmation." }
+      : {
+          state: "attention",
+          title: "Email isn't connected",
+          detail: "Reports are still saved here, but nobody is emailed. Add your Resend key as RESEND_API_KEY in Cloudflare.",
+          link: { href: `${SETUP_GUIDE_URL}#3-get-your-resend-key`, text: "How to get a Resend key" },
+        },
+    fromDomain === "resend.dev"
+      ? {
+          state: "attention",
+          title: "You're using Resend's test address",
+          detail:
+            "Emails only reach the address you signed up to Resend with, so visitors won't get automatic replies. Verify your domain in Resend, then change EMAIL_FROM.",
+          link: { href: `${SETUP_GUIDE_URL}#7-verify-your-domain-in-resend`, text: "How to verify your domain" },
+        }
+      : {
+          state: "done",
+          title: `Emails come from ${fromAddress}`,
+          detail: "Send yourself a test email below to make sure this domain is verified in Resend.",
+        },
+    sites.length > 0
+      ? { state: "done", title: `${sites.length} website${sites.length === 1 ? "" : "s"} added`, detail: "Visitors can report problems and read your statement." }
+      : {
+          state: "attention",
+          title: "No websites added yet",
+          detail: "Add your website to get its report form, accessibility statement and footer links.",
+          link: { href: "/admin/sites/new", text: "Add a website" },
+        },
+    validTimeZone(env.TIME_ZONE)
+      ? { state: "done", title: `Times are shown in ${env.TIME_ZONE}`, detail: "To change this, update TIME_ZONE in Cloudflare." }
+      : { state: "attention", title: `"${env.TIME_ZONE}" isn't a time zone we recognize`, detail: "Use a name like America/New_York or Europe/London. Times are shown in UTC until then." },
+  ];
+  const footers = await Promise.all(sites.slice(0, 10).map((site) => checkFooterLinks(site, origin)));
+  return (
+    <SetupPage email={adminEmail} checks={checks} footers={footers} emailConnected={!!env.RESEND_API_KEY} testResult={testResult} />
+  );
+}
+
+admin.get("/setup", async (c) => c.html(await setupPage(c, c.get("admin"))));
+
+admin.post("/setup/test-email", async (c) => {
+  const email = c.get("admin");
+  const tries = await countSubmission(c.env.DB, await visitorKey(email, "test-email", c.env.HASH_SALT!), Date.now(), HOUR);
+  const result: TestEmailResult =
+    tries > 5
+      ? { ok: false, message: "You've sent several test emails in the last hour. Please wait a little and try again." }
+      : await sendTestEmail(c.env, email);
+  return c.html(await setupPage(c, email, result), result.ok ? 200 : 400);
 });
 
 export default admin;

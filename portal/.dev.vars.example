@@ -4,10 +4,13 @@
 # Who can log in, separated by commas.
 ADMIN_EMAILS=you@example.com
 
-# A long random value used to scramble visitors' IP and email addresses before they
-# are stored, so the real addresses are never kept. Any random text of 32+ characters.
-HASH_SALT=replace-with-a-long-random-value
-
 # Your Resend API key, with "Sending access" only. Without it, reports are still saved
 # but no emails are sent.
 RESEND_API_KEY=re_your_key_here
+
+# Who emails come from. Until you verify your own domain in Resend, keep this test
+# address: it only delivers to the address you signed up to Resend with.
+EMAIL_FROM=Accessibility reports <onboarding@resend.dev>
+
+# Your time zone, like America/New_York, America/Chicago, Europe/London.
+TIME_ZONE=America/New_York

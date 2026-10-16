@@ -12,6 +12,7 @@ function AdminHeader(props: { email: string }) {
       <nav aria-label="Portal">
         <a href="/admin">Reports</a>
         <a href="/admin/sites">Websites</a>
+        <a href="/admin/setup">Check my setup</a>
         <a href="/admin/reports.csv">Download spreadsheet</a>
         <span class="who">Logged in as {props.email}</span>
         <form method="post" action="/admin/logout">

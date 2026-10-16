@@ -55,6 +55,9 @@ const styles = `
   .timeline time { font-weight: 600; }
   .danger { background: #b3261e; }
   .secondary { background: none; color: var(--link); text-decoration: underline; padding: 0.75rem 0; }
+  .checks { list-style: none; padding: 0; }
+  .checks li { border-bottom: 1px solid var(--border); padding: 0.75rem 0; }
+  .status.done { color: #1e6b34; } .status.attention { color: #b3261e; } .status.unknown { color: var(--muted); }
 `;
 
 export function Layout(props: { title: string; children: Child; header?: Child; wide?: boolean }) {

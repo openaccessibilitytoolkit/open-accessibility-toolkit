@@ -3,11 +3,12 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import admin from "./admin-routes.js";
-import { missingSettings, type Bindings } from "./bindings.js";
+import { DEFAULTS, type Bindings } from "./bindings.js";
 import { countSubmission, createReport, getSite, reference } from "./db.js";
 import { emailNewReport } from "./email.js";
 import { Message, ReportForm, ThankYou } from "./pages.js";
 import { RATE_LIMIT, looksAutomated, visitorKey } from "./safeguards.js";
+import { hashSalt } from "./settings.js";
 import { StatementPage } from "./statement.js";
 import { validateReport } from "./validate.js";
 
@@ -24,18 +25,29 @@ app.use(async (c, next) => {
   c.header("Referrer-Policy", "same-origin");
 });
 
-// A portal without its private settings can't protect visitors' privacy, so it stops
-// with a clear message instead of quietly misbehaving.
+// Every request gets the privacy key that scrambles visitors' addresses. If the
+// database isn't ready (for example its tables were never created), the portal
+// stops with a clear message instead of quietly misbehaving.
 app.use(async (c, next) => {
-  const missing = missingSettings(c.env);
-  if (missing.length === 0) return next();
-  console.error(`The portal is missing these private settings: ${missing.join(", ")}`);
-  return c.html(
-    <Message title="This portal isn't set up yet">
-      {`The portal's owner needs to finish setting it up. Missing setting: ${missing.join(", ")}.`}
-    </Message>,
-    503,
-  );
+  let salt: string;
+  try {
+    salt = await hashSalt(c.env.DB, c.env.HASH_SALT);
+  } catch (err) {
+    console.error("The portal's database isn't ready. Run: npx wrangler d1 migrations apply DB --remote", err);
+    return c.html(
+      <Message title="This portal isn't set up yet">
+        The portal's owner needs to finish setting it up: its database isn't ready yet.
+      </Message>,
+      503,
+    );
+  }
+  c.env = {
+    ...c.env,
+    HASH_SALT: salt,
+    EMAIL_FROM: c.env.EMAIL_FROM || DEFAULTS.EMAIL_FROM,
+    TIME_ZONE: c.env.TIME_ZONE || DEFAULTS.TIME_ZONE,
+  };
+  return next();
 });
 
 app.get("/", (c) =>
@@ -69,7 +81,7 @@ app.post("/report/:siteId", bodyLimit({ maxSize: 32 * 1024 }), async (c) => {
   const ip = c.req.header("CF-Connecting-IP") ?? "unknown";
   const count = await countSubmission(
     c.env.DB,
-    await visitorKey(ip, site.id, c.env.HASH_SALT!), // checked by the setup check above
+    await visitorKey(ip, site.id, c.env.HASH_SALT!), // always set by the privacy-key step above
     now,
     RATE_LIMIT.windowMs,
   );

@@ -105,6 +105,18 @@ automated checks can't prove full conformance, so the tool never claims it.
 More than one website: `--new` sets up another, `--site <name>` picks one, and `--edit`
 changes the saved answers.
 
+## Accessibility report portal (free, self-hosted)
+
+Give visitors an easy way to report accessibility problems, get emailed when they do,
+keep a dated record of every report and fix, and host an honest accessibility statement.
+Each owner runs their own copy on Cloudflare's free plan.
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit/tree/main/portal)
+
+No coding needed: follow the **[step-by-step setup guide](docs/setup-guide.md)**. See the
+[live demo](https://open-a11y-portal.openaccessibilitytoolkit.workers.dev/report/joesbakery-example)
+and [portal/README.md](portal/README.md) for details.
+
 ## What's next (planned)
 
 1. Progress history: what got fixed and what's new since the last scan.

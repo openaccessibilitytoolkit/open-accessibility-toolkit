@@ -13,14 +13,8 @@
       // publish, and keeps using it after that.
       "migrations_dir": "migrations"
     }
-  ],
-  "vars": {
-    // Who emails come from. Without your own domain verified in Resend, emails from
-    // onboarding@resend.dev only reach your own Resend account's address.
-    "EMAIL_FROM": "Accessibility reports <onboarding@resend.dev>",
-    // Times in the portal and emails are shown in this time zone.
-    "TIME_ZONE": "America/New_York"
-  }
-  // Private settings are never written here. They're listed in .dev.vars.example:
-  // ADMIN_EMAILS, HASH_SALT and RESEND_API_KEY.
+  ]
+  // All settings are private settings (secrets), listed with explanations in
+  // .dev.vars.example. Change them in Cloudflare: your Worker, then Settings, then
+  // Variables and Secrets. Updates to the portal never overwrite them.
 }

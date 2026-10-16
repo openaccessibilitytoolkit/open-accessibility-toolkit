@@ -282,3 +282,50 @@ export async function sendLoginEmail(env: EmailEnv, to: string, link: string, mi
   );
   if (!result.ok) console.error(`Login link email could not be sent: ${result.error}`);
 }
+
+/** What a test email attempt found, in plain English. */
+export interface TestEmailResult {
+  ok: boolean;
+  message: string;
+  detail?: string;
+}
+
+/** Sends a test email to an admin and explains any problem in plain words. */
+export async function sendTestEmail(env: EmailEnv, to: string): Promise<TestEmailResult> {
+  if (!env.RESEND_API_KEY) {
+    return { ok: false, message: "Email isn't connected yet, so no test email could be sent." };
+  }
+  await countEmail(env.DB, today(new Date()));
+  const title = "Test email from your accessibility portal";
+  const text = "This is a test. If you can read it, your portal can send you emails about new accessibility reports.";
+  const result = await sendEmail(env.RESEND_API_KEY, fromAddress(env.EMAIL_FROM, "Accessibility portal"), {
+    to: [to],
+    subject: title,
+    text: `${title}\n\n${text}\n`,
+    html: htmlBody(title, [text]),
+    idempotencyKey: `test-${crypto.randomUUID()}`,
+  });
+  if (result.ok) {
+    return { ok: true, message: `Test email sent to ${to}. Check your inbox, and your spam folder if it isn't there.` };
+  }
+  const error = result.error.toLowerCase();
+  if (error.includes("testing emails") || error.includes("own email")) {
+    return {
+      ok: false,
+      message:
+        "Resend only lets you send to the address you signed up with until you verify your domain. Log in with that address, or verify your domain.",
+      detail: result.error,
+    };
+  }
+  if (error.includes("domain") && (error.includes("verif") || error.includes("not"))) {
+    return {
+      ok: false,
+      message: "The domain in your sending address isn't verified in Resend yet. Finish the domain step in Resend.",
+      detail: result.error,
+    };
+  }
+  if (error.startsWith("401") || error.includes("api key")) {
+    return { ok: false, message: "Resend didn't accept your API key. Create a new one and save it again.", detail: result.error };
+  }
+  return { ok: false, message: "The test email couldn't be sent.", detail: result.error };
+}
