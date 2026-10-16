@@ -3,6 +3,7 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { countSubmission, createReport, getSite, reference } from "./db.js";
+import { emailNewReport } from "./email.js";
 import { Message, ReportForm, ThankYou } from "./pages.js";
 import { RATE_LIMIT, looksAutomated, visitorKey } from "./safeguards.js";
 import { validateReport } from "./validate.js";
@@ -68,6 +69,12 @@ app.post("/report/:siteId", bodyLimit({ maxSize: 32 * 1024 }), async (c) => {
   }
 
   const id = await createReport(c.env.DB, site.id, values, new Date(now));
+  // Emails go out after the visitor sees the thank-you page, so they never wait for them.
+  c.executionCtx.waitUntil(
+    emailNewReport(c.env, site, id, values, new Date(now)).catch((err) =>
+      console.error(`Emails for report ${id} failed`, err),
+    ),
+  );
   return c.redirect(`${thanks}?ref=${reference(id)}`, 303);
 });
 

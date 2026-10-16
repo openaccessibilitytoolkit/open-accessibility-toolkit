@@ -8,9 +8,8 @@ else sees the reports.
 The portal records and organizes reports. It does not make a website "compliant";
 fixing the website does that.
 
-**Status:** early. The report form works. Coming next: emails (an automatic reply to the
-visitor and a notification to you), your login and inbox, managing your websites, and a
-step-by-step setup guide for people who don't code.
+**Status:** early. The report form and emails work. Coming next: your login and inbox,
+managing your websites, and a step-by-step setup guide for people who don't code.
 
 ## What works so far
 
@@ -22,6 +21,17 @@ step-by-step setup guide for people who don't code.
 - Safeguards without puzzles: a hidden field robots fill in, a minimum time to fill the
   form, and at most 5 reports per visitor per hour. Visitors' IP addresses are never
   stored; only a salted hash is kept, for the rate limit.
+- **Emails, through Resend** (free plan: 100 a day):
+  - **To you:** "New accessibility report R-0042 for Joe's Bakery", with everything the
+    visitor sent. Replying to it answers the visitor. It goes to the website's contact
+    email plus any extra addresses in `notify_emails`.
+  - **To the visitor** (only if they gave an email): a fixed thank-you with their reference
+    number and your reply time. It never repeats what they typed, so it can't be misused to
+    send messages to strangers. At most one per address per day.
+  - After 90 emails in a day, auto-replies pause but you're still notified.
+  - Emails go out after the visitor sees the thank-you page. Every email sent, skipped or
+    failed is written to the report's timeline.
+  - Without an email key, reports are still saved and the timeline says email isn't set up.
 - No JavaScript, strict security headers, and every page passes the toolkit's own
   WCAG 2.2 AA scan, including the error state.
 
@@ -39,6 +49,17 @@ npm run dev
 
 Then open http://localhost:8787/report/joesbakery-com (a demo website added by
 `seed/dev.sql`).
+
+### Sending real emails on your computer
+
+1. In Resend, create an API key with **Sending access** only.
+2. Copy `.dev.vars.example` to `.dev.vars` and replace `re_your_key_here` with your key.
+   `.dev.vars` is never committed. Never paste the key anywhere else.
+3. Restart `npm run dev`.
+
+Without your own domain verified in Resend, emails come from `onboarding@resend.dev` and
+only reach your own Resend account's address. Anything else is recorded in the timeline
+as a failed email.
 
 ## Tests
 

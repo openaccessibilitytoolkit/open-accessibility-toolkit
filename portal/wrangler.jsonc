@@ -17,6 +17,10 @@
   "vars": {
     // Mixed into visitor IP addresses before they are hashed for rate limiting.
     // Set a long random value as a secret when deploying: wrangler secret put HASH_SALT
-    "HASH_SALT": "local-development-only"
+    "HASH_SALT": "local-development-only",
+    // Who emails come from. Without your own domain, Resend only delivers emails
+    // from onboarding@resend.dev to your own Resend account's address.
+    "EMAIL_FROM": "Accessibility reports <onboarding@resend.dev>"
   }
+  // Secret, never written here: RESEND_API_KEY (see README.md).
 }

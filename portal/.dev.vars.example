@@ -1,0 +1,3 @@
+# Copy this file to .dev.vars (which is never committed) to send real emails
+# while trying the portal on your computer. Use a Resend key with "Sending access" only.
+RESEND_API_KEY=re_your_key_here

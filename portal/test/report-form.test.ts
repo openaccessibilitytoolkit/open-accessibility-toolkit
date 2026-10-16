@@ -11,6 +11,8 @@ beforeEach(async () => {
     env.DB.prepare("DELETE FROM report_events"),
     env.DB.prepare("DELETE FROM reports"),
     env.DB.prepare("DELETE FROM rate_limits"),
+    env.DB.prepare("DELETE FROM auto_replies"),
+    env.DB.prepare("DELETE FROM email_counts"),
     env.DB.prepare("DELETE FROM sites"),
     env.DB.prepare(
       `INSERT INTO sites (id, organization, website, contact_email, reply_days, created_at)
@@ -71,7 +73,10 @@ describe("sending a report", () => {
       assistive_tech: '["keyboard","screen-reader"]',
       status: "new",
     });
-    const event = await env.DB.prepare("SELECT kind, at FROM report_events").first<{ kind: string; at: string }>();
+    const event = await env.DB.prepare("SELECT kind, at FROM report_events WHERE kind = 'received'").first<{
+      kind: string;
+      at: string;
+    }>();
     expect(event).toEqual({ kind: "received", at: report!.received_at });
 
     const thanks = await SELF.fetch("https://portal.test/report/joesbakery-com/thanks?ref=R-0001");

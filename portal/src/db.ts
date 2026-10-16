@@ -9,11 +9,13 @@ export interface Site {
   contact_email: string;
   reply_days: number;
   phone: string | null;
+  /** JSON list of extra addresses to notify about new reports. */
+  notify_emails: string;
 }
 
 export function getSite(db: D1Database, id: string): Promise<Site | null> {
   return db
-    .prepare("SELECT id, organization, website, contact_email, reply_days, phone FROM sites WHERE id = ?")
+    .prepare("SELECT id, organization, website, contact_email, reply_days, phone, notify_emails FROM sites WHERE id = ?")
     .bind(id)
     .first<Site>();
 }
@@ -56,4 +58,11 @@ export async function countSubmission(db: D1Database, key: string, now: number, 
     .bind(key, now, now - windowMs)
     .first<{ count: number }>();
   return row?.count ?? 1;
+}
+
+export async function addEvent(db: D1Database, reportId: number, kind: string, detail: string | null, at: Date): Promise<void> {
+  await db
+    .prepare("INSERT INTO report_events (report_id, at, kind, detail) VALUES (?, ?, ?, ?)")
+    .bind(reportId, at.toISOString(), kind, detail)
+    .run();
 }
