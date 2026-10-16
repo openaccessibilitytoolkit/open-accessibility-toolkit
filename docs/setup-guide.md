@@ -81,19 +81,35 @@ Resend and create a new one.
 
    [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit/tree/main/portal)
 
+   If the button doesn't take you to a page called **"Set up your application"** (for
+   example, Cloudflare asks you to log in and then shows its home page instead), simply
+   click the button again.
+
 2. Log in to **Cloudflare** if it asks.
-3. **Connect GitHub** when it asks. This lets Cloudflare keep your copy of the portal in
-   your GitHub account. Approve it for your GitHub account.
-4. You'll see a setup page. Fill in the **settings** (each one has a short explanation):
-   - **ADMIN_EMAILS:** your email address. This is who can log in to your portal. To let
-     more people in, separate the addresses with commas.
-   - **RESEND_API_KEY:** paste the key from step 3.
-   - **EMAIL_FROM:** leave it as it is for now. You'll change it in step 7.
-   - **TIME_ZONE:** your time zone, like `America/New_York`, `America/Chicago`,
-     `America/Los_Angeles` or `Europe/London`.
-   - Leave everything else as it is. Cloudflare creates the database for you.
-5. Click **Create and deploy**. It takes a minute or two.
-6. When it's finished, Cloudflare shows your portal's address, ending in
+3. **Connect GitHub.** Under **Git account**, click **New GitHub connection**. It's the
+   left button with the cat logo. The one next to it is **GitLab**, a different website.
+   - GitHub asks to **Install & Authorize Cloudflare Workers and Pages** on your
+     account. Keep **All repositories** selected (Cloudflare needs it to create your
+     copy) and click **Install & Authorize**.
+   - **Don't create a repository on GitHub yourself.** Cloudflare creates it for you.
+   - If you end up on a page called **"Select a repository"**, don't pick anything.
+     Click the Deploy button above again instead.
+4. Back on **"Set up your application"**, fill it in from top to bottom:
+   - **Git account:** choose your GitHub account from the list.
+   - Tick **Create private Git repository**. Your copy doesn't need to be public.
+   - **Project name** and **database:** leave them as they are. Cloudflare creates the
+     database for you.
+   - The setting boxes below come **pre-filled with hidden examples** (you'll only see
+     dots). For each one you change, click in the box, press **Ctrl+A** (Cmd+A on a Mac),
+     press **Delete**, then type or paste:
+     - **ADMIN_EMAILS:** your email address. This is who can log in to your portal. To
+       let more people in, separate the addresses with commas.
+     - **RESEND_API_KEY:** paste the key from step 3.
+     - **EMAIL_FROM:** leave it as it is for now. You'll change it in step 7.
+     - **TIME_ZONE:** leave it, or type your own time zone, like `America/Chicago`,
+       `America/Los_Angeles` or `Europe/London`.
+5. Click **Deploy**. It takes a minute or two.
+6. When it's finished, the last lines show your portal's address, ending in
    **`.workers.dev`**. **Write it down.** We'll call it *your portal address*.
 
 You can find it again any time: in Cloudflare, go to **Workers & Pages** and click your
@@ -199,6 +215,13 @@ Variables and Secrets and paste the new key.
 
 **Visitors aren't getting a confirmation email.**
 Finish step 7, then change **EMAIL_FROM**.
+
+**I'm setting up a second portal in the same Cloudflare account.**
+Give it a different **project name**, and make sure it gets its **own database**:
+Cloudflare may connect the new copy to the first portal's database because they share a
+name. After it's created, check under your Worker's **Bindings** that **DB** points to a
+database with the new name. If not, ask a developer to set `database_name` and
+`database_id` in the copy's `wrangler.jsonc`.
 
 **I want more people to be able to log in.**
 In Cloudflare, edit **ADMIN_EMAILS** and add their addresses, separated by commas.
