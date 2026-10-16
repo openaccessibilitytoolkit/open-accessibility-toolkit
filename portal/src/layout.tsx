@@ -32,9 +32,32 @@ const styles = `
   .notice { background: var(--panel); padding: 1rem 1.25rem; }
   .reference { font-size: 1.5rem; font-weight: 700; }
   .trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+  main.wide { max-width: 64rem; }
+  .site-header { border-bottom: 1px solid var(--border); background: var(--panel); }
+  .site-header nav { max-width: 64rem; margin: 0 auto; padding: 0.5rem 1rem; display: flex; flex-wrap: wrap;
+                     gap: 0.5rem 1.5rem; align-items: center; }
+  .site-header .who { margin-left: auto; color: var(--muted); }
+  .site-header a, .link-button { display: inline-block; padding: 0.5rem 0; min-height: 2.75rem; }
+  .link-button { background: none; color: var(--link); font-weight: normal; text-decoration: underline;
+                 padding: 0.5rem 0; }
+  table { border-collapse: collapse; width: 100%; }
+  caption { text-align: left; font-weight: 600; padding-bottom: 0.5rem; }
+  th, td { text-align: left; vertical-align: top; padding: 0.5rem; border-bottom: 1px solid var(--border); }
+  td a { display: inline-block; min-height: 1.5rem; }
+  .filters { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin: 1rem 0 1.5rem; }
+  .filters label { font-weight: 600; }
+  select { font: inherit; padding: 0.4rem; border: 2px solid var(--border); border-radius: 4px; min-height: 2.75rem; }
+  .counts { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+  .saved { background: #e6f4ea; border-left: 6px solid #1e6b34; padding: 0.75rem 1rem; }
+  dl.details { display: grid; grid-template-columns: max-content 1fr; gap: 0.5rem 1rem; }
+  dl.details dt { font-weight: 600; }
+  dl.details dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .timeline time { font-weight: 600; }
+  .danger { background: #b3261e; }
+  .secondary { background: none; color: var(--link); text-decoration: underline; padding: 0.75rem 0; }
 `;
 
-export function Layout(props: { title: string; children: Child }) {
+export function Layout(props: { title: string; children: Child; header?: Child; wide?: boolean }) {
   return (
     <html lang="en">
       <head>
@@ -46,7 +69,8 @@ export function Layout(props: { title: string; children: Child }) {
         <style dangerouslySetInnerHTML={{ __html: styles }} />
       </head>
       <body>
-        <main>{props.children}</main>
+        {props.header}
+        <main class={props.wide ? "wide" : undefined}>{props.children}</main>
       </body>
     </html>
   );

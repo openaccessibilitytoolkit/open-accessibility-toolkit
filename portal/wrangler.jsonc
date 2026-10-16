@@ -20,7 +20,11 @@
     "HASH_SALT": "local-development-only",
     // Who emails come from. Without your own domain, Resend only delivers emails
     // from onboarding@resend.dev to your own Resend account's address.
-    "EMAIL_FROM": "Accessibility reports <onboarding@resend.dev>"
+    "EMAIL_FROM": "Accessibility reports <onboarding@resend.dev>",
+    // Who can log in, separated by commas. Set this when you set up the portal.
+    "ADMIN_EMAILS": "",
+    // Times in the portal and emails are shown in this time zone.
+    "TIME_ZONE": "America/New_York"
   }
   // Secret, never written here: RESEND_API_KEY (see README.md).
 }

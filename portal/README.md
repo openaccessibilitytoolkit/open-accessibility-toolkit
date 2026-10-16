@@ -8,8 +8,9 @@ else sees the reports.
 The portal records and organizes reports. It does not make a website "compliant";
 fixing the website does that.
 
-**Status:** early. The report form and emails work. Coming next: your login and inbox,
-managing your websites, and a step-by-step setup guide for people who don't code.
+**Status:** early. The report form, emails, your login and inbox work. Coming next:
+managing your websites in the portal, and a step-by-step setup guide for people who
+don't code.
 
 ## What works so far
 
@@ -32,6 +33,19 @@ managing your websites, and a step-by-step setup guide for people who don't code
   - Emails go out after the visitor sees the thank-you page. Every email sent, skipped or
     failed is written to the report's timeline.
   - Without an email key, reports are still saved and the timeline says email isn't set up.
+- **Your login** at `/admin`: no passwords. Type your email and get a one-time link
+  (works once, expires in 15 minutes, at most 3 per 15 minutes). The link opens a
+  "Log me in" button, so email virus-scanners that open links can't use it up. You stay
+  logged in for 7 days. Only addresses in `ADMIN_EMAILS` can log in, and the login page
+  answers everyone the same way, so nobody can find out who the admins are.
+- **Your inbox:** every report from all your websites, newest first, with counts by
+  status and filters by website and status.
+- **Each report's page:** everything the visitor sent, a status (New, In progress,
+  Fixed), notes, and a timeline of what happened, when, and who did it.
+- **Delete** a report and its timeline permanently, after an "Are you sure?" page.
+- **Download a spreadsheet** (CSV) of all reports. Cells that start like a formula are
+  made safe, so a visitor's text can't run as a formula in Excel.
+- Times are shown in the `TIME_ZONE` you choose (default: US Eastern).
 - No JavaScript, strict security headers, and every page passes the toolkit's own
   WCAG 2.2 AA scan, including the error state.
 
@@ -49,6 +63,13 @@ npm run dev
 
 Then open http://localhost:8787/report/joesbakery-com (a demo website added by
 `seed/dev.sql`).
+
+### Settings
+
+In `wrangler.jsonc` under `vars`: `ADMIN_EMAILS` (who can log in, separated by commas),
+`TIME_ZONE` (for example `America/Chicago`), and `EMAIL_FROM`. Secrets go in
+`.dev.vars` on your computer, or `wrangler secret put` on Cloudflare: `RESEND_API_KEY`
+and `HASH_SALT`.
 
 ### Sending real emails on your computer
 
@@ -69,7 +90,7 @@ npm test
 ```
 
 Tests run inside Cloudflare's Workers runtime on your computer, with a fresh local
-database.
+database. They never use a real email key, even if `.dev.vars` has one.
 
 ## Why Cloudflare
 

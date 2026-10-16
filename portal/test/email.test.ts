@@ -33,7 +33,10 @@ const input: ReportInput = {
 const receivedAt = new Date("2026-10-16T20:18:00.000Z");
 
 describe("ownerNotification", () => {
-  const email = ownerNotification(site, 7, input, receivedAt);
+  const email = ownerNotification(site, 7, input, receivedAt, {
+    portalOrigin: "https://portal.test",
+    timeZone: "America/New_York",
+  });
 
   it("goes to the contact email and extra addresses, once each", () => {
     expect(email.to).toEqual(["hello@joesbakery.com", "web@joesbakery.com"]);
@@ -42,12 +45,18 @@ describe("ownerNotification", () => {
 
   it("has everything the owner needs to act on it", () => {
     expect(email.subject).toBe("New accessibility report R-0007 for Joe's Bakery");
-    expect(email.text).toContain("Received: October 16, 2026 at 8:18 PM UTC");
+    expect(email.text).toContain("Received: Oct 16, 2026, 4:18 PM EDT");
+    expect(email.text).toContain("Open this report: https://portal.test/admin/reports/7");
     expect(email.text).toContain("Page: /shop");
     expect(email.text).toContain("How they were using the site: Keyboard only, no mouse; A screen reader");
     expect(email.text).toContain("Visitor's email: visitor@example.com");
     expect(email.text).toContain("The <b>Order</b> button");
     expect(email.replyTo).toBe("visitor@example.com");
+  });
+
+  it("links to the report in the portal, but never makes the visitor's links clickable", () => {
+    expect(email.html).toContain('<a href="https://portal.test/admin/reports/7">Open report R-0007 in your portal</a>');
+    expect(email.html).not.toContain('href="http://evil.example');
   });
 
   it("shows the visitor's text safely in the HTML version", () => {
@@ -133,7 +142,7 @@ describe("emailNewReport", () => {
 
   it("notifies the owner and auto-replies, and records both in the timeline", async () => {
     const id = await newReport();
-    await emailNewReport(emailEnv(), site, id, input, receivedAt);
+    await emailNewReport(emailEnv(), site, id, input, receivedAt, "https://portal.test");
     expect(sent.map((e) => e.to)).toEqual([["hello@joesbakery.com", "web@joesbakery.com"], ["visitor@example.com"]]);
     expect(sent[0].from).toBe("Joe's Bakery <onboarding@resend.dev>");
     expect(await timeline(id)).toEqual(["owner_notified", "auto_reply_sent"]);
@@ -141,7 +150,7 @@ describe("emailNewReport", () => {
 
   it("only notifies the owner when the visitor gave no email", async () => {
     const id = await newReport("");
-    await emailNewReport(emailEnv(), site, id, { ...input, email: "" }, receivedAt);
+    await emailNewReport(emailEnv(), site, id, { ...input, email: "" }, receivedAt, "https://portal.test");
     expect(sent).toHaveLength(1);
     expect(await timeline(id)).toEqual(["owner_notified"]);
   });
@@ -149,8 +158,8 @@ describe("emailNewReport", () => {
   it("sends at most one auto-reply per address per day", async () => {
     const first = await newReport();
     const second = await newReport();
-    await emailNewReport(emailEnv(), site, first, input, receivedAt);
-    await emailNewReport(emailEnv(), site, second, { ...input, email: "VISITOR@example.com" }, receivedAt);
+    await emailNewReport(emailEnv(), site, first, input, receivedAt, "https://portal.test");
+    await emailNewReport(emailEnv(), site, second, { ...input, email: "VISITOR@example.com" }, receivedAt, "https://portal.test");
     expect(sent.filter((e) => e.to[0] === "visitor@example.com" || e.to[0] === "VISITOR@example.com")).toHaveLength(1);
     expect(await timeline(second)).toEqual(["owner_notified", "auto_reply_skipped"]);
   });
@@ -160,7 +169,7 @@ describe("emailNewReport", () => {
       .bind(AUTO_REPLY_DAILY_LIMIT)
       .run();
     const id = await newReport();
-    await emailNewReport(emailEnv(), site, id, input, receivedAt);
+    await emailNewReport(emailEnv(), site, id, input, receivedAt, "https://portal.test");
     expect(sent).toHaveLength(1);
     expect(sent[0].to).toContain("hello@joesbakery.com");
     expect(await timeline(id)).toEqual(["owner_notified", "auto_reply_skipped"]);
@@ -169,7 +178,7 @@ describe("emailNewReport", () => {
   it("records a failed email instead of losing it", async () => {
     resendAnswer = () => Response.json({ message: "The from address is not verified" }, { status: 403 });
     const id = await newReport("");
-    await emailNewReport(emailEnv(), site, id, { ...input, email: "" }, receivedAt);
+    await emailNewReport(emailEnv(), site, id, { ...input, email: "" }, receivedAt, "https://portal.test");
     const row = await env.DB.prepare("SELECT kind, detail FROM report_events WHERE report_id = ?")
       .bind(id)
       .first<{ kind: string; detail: string }>();
@@ -181,7 +190,7 @@ describe("emailNewReport", () => {
 
   it("still saves reports when email isn't set up, and says so", async () => {
     const id = await newReport();
-    await emailNewReport(emailEnv(""), site, id, input, receivedAt);
+    await emailNewReport(emailEnv(""), site, id, input, receivedAt, "https://portal.test");
     expect(sent).toHaveLength(0);
     expect(await timeline(id)).toEqual(["emails_not_set_up"]);
   });

@@ -10,7 +10,15 @@ export default defineConfig(async () => {
     plugins: [
       cloudflareTest({
         wrangler: { configPath: "./wrangler.jsonc" },
-        miniflare: { bindings: { TEST_MIGRATIONS: migrations } },
+        miniflare: {
+          bindings: {
+            TEST_MIGRATIONS: migrations,
+            // Tests must never send real emails, even if .dev.vars holds a real key.
+            RESEND_API_KEY: "",
+            ADMIN_EMAILS: "owner@joesbakery.com, Second@Example.com",
+            TIME_ZONE: "America/New_York",
+          },
+        },
       }),
     ],
     test: {

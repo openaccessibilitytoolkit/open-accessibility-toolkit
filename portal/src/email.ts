@@ -3,6 +3,7 @@
 // to the report's timeline, so nothing goes missing silently.
 
 import { addEvent, reference, type Site } from "./db.js";
+import { formatTime } from "./timeline.js";
 import { visitorKey } from "./safeguards.js";
 import { ASSISTIVE_TECH, isEmail, type ReportInput } from "./validate.js";
 
@@ -25,6 +26,7 @@ export interface EmailEnv {
   DB: D1Database;
   HASH_SALT: string;
   EMAIL_FROM: string;
+  TIME_ZONE: string;
   RESEND_API_KEY?: string;
 }
 
@@ -48,17 +50,6 @@ export function fromAddress(emailFrom: string, organization: string): string {
   return `${headerSafe(organization)} <${address}>`;
 }
 
-export function formatTime(at: Date): string {
-  return `${at.toLocaleString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "UTC",
-  })} UTC`;
-}
-
 function host(site: Site): string {
   return new URL(site.website).host;
 }
@@ -79,10 +70,15 @@ export function ownerRecipients(site: Site): string[] {
   return [...new Set(all.filter((e): e is string => typeof e === "string" && isEmail(e)).map((e) => e.toLowerCase()))];
 }
 
-/** Turns plain text into simple, readable HTML paragraphs. */
-function htmlBody(title: string, paragraphs: string[]): string {
+/**
+ * Turns plain text into simple, readable HTML paragraphs. Only our own `action`
+ * link is clickable; links in visitors' text stay plain text, so they can't be
+ * used to trick the owner.
+ */
+function htmlBody(title: string, paragraphs: string[], action?: { text: string; href: string }): string {
   const body = paragraphs
     .map((p) => `<p style="margin:0 0 16px">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
+    .concat(action ? [`<p style="margin:0 0 16px"><a href="${escapeHtml(action.href)}">${escapeHtml(action.text)}</a></p>`] : [])
     .join("\n");
   return `<!doctype html>
 <html lang="en">
@@ -94,12 +90,19 @@ ${body}
 </html>`;
 }
 
-export function ownerNotification(site: Site, reportId: number, input: ReportInput, receivedAt: Date): OutgoingEmail {
+export function ownerNotification(
+  site: Site,
+  reportId: number,
+  input: ReportInput,
+  receivedAt: Date,
+  options: { portalOrigin: string; timeZone: string },
+): OutgoingEmail {
   const ref = reference(reportId);
   const title = `New accessibility report ${ref} for ${headerSafe(site.organization)}`;
   const howUsed = input.assistiveTech.map((t) => ASSISTIVE_TECH[t]).join("; ");
+  const reportUrl = `${options.portalOrigin}/admin/reports/${reportId}`;
   const paragraphs = [
-    `Received: ${formatTime(receivedAt)}`,
+    `Received: ${formatTime(receivedAt, options.timeZone)}`,
     `Page: ${input.page || "Not given"}`,
     `How they were using the site: ${howUsed || "Not given"}`,
     input.email
@@ -111,8 +114,8 @@ export function ownerNotification(site: Site, reportId: number, input: ReportInp
   return {
     to: ownerRecipients(site),
     subject: title,
-    text: [title, "", ...paragraphs.flatMap((p) => [p, ""])].join("\n"),
-    html: htmlBody(title, paragraphs),
+    text: [title, "", ...paragraphs.flatMap((p) => [p, ""]), `Open this report: ${reportUrl}`, ""].join("\n"),
+    html: htmlBody(title, paragraphs, { text: `Open report ${ref} in your portal`, href: reportUrl }),
     ...(input.email ? { replyTo: input.email } : {}),
     idempotencyKey: `report-${reportId}-owner`,
   };
@@ -202,6 +205,7 @@ export async function emailNewReport(
   reportId: number,
   input: ReportInput,
   receivedAt: Date,
+  portalOrigin: string,
   now: () => Date = () => new Date(),
 ): Promise<void> {
   if (!env.RESEND_API_KEY) {
@@ -210,7 +214,7 @@ export async function emailNewReport(
   }
   const day = today(receivedAt);
 
-  const owner = ownerNotification(site, reportId, input, receivedAt);
+  const owner = ownerNotification(site, reportId, input, receivedAt, { portalOrigin, timeZone: env.TIME_ZONE });
   await countEmail(env.DB, day);
   const ownerResult = await sendEmail(env.RESEND_API_KEY, fromAddress(env.EMAIL_FROM, site.organization), owner);
   await addEvent(
@@ -245,4 +249,35 @@ export async function emailNewReport(
     replyResult.ok ? "Auto-reply sent to the visitor" : `Auto-reply could not be sent: ${replyResult.error}`,
     now(),
   );
+}
+
+/** The one-time login link email. */
+export function loginEmail(to: string, link: string, minutes: number): OutgoingEmail {
+  const title = "Your login link for the accessibility portal";
+  const paragraphs = [
+    `Use the link below to log in to your accessibility portal. It works once and expires in ${minutes} minutes.`,
+    "If you didn't ask to log in, you can ignore this email. Nobody can log in without this link.",
+  ];
+  return {
+    to: [to],
+    subject: title,
+    text: [title, "", paragraphs[0], "", link, "", paragraphs[1], ""].join("\n"),
+    html: htmlBody(title, paragraphs, { text: "Log in to your accessibility portal", href: link }),
+    idempotencyKey: `login-${crypto.randomUUID()}`,
+  };
+}
+
+/** Sends a login link, counting it toward today's emails. Problems are logged, not shown, so nobody learns who is an admin. */
+export async function sendLoginEmail(env: EmailEnv, to: string, link: string, minutes: number): Promise<void> {
+  if (!env.RESEND_API_KEY) {
+    console.error("A login link was requested, but email is not set up (RESEND_API_KEY is missing).");
+    return;
+  }
+  await countEmail(env.DB, today(new Date()));
+  const result = await sendEmail(
+    env.RESEND_API_KEY,
+    fromAddress(env.EMAIL_FROM, "Accessibility portal"),
+    loginEmail(to, link, minutes),
+  );
+  if (!result.ok) console.error(`Login link email could not be sent: ${result.error}`);
 }
