@@ -111,7 +111,7 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: openaccessibilitytoolkit/open-accessibility-toolkit@main
+      - uses: openaccessibilitytoolkit/open-accessibility-toolkit@v1
         with:
           url: https://www.example.com
           max-pages: 25
