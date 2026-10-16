@@ -67,7 +67,9 @@ private.
 
 1. In Resend, click **API Keys** in the menu, then **Create API Key**.
 2. **Name:** `Accessibility portal`.
-3. **Permission:** choose **Sending access**, not "Full access".
+3. **Permission:** the dropdown may start on **Full access**. Change it to **Sending
+   access**. The portal only needs to send emails, and a sending-only key can't do any
+   harm if it ever leaks.
 4. Click **Create**, then **copy the key** straight away. It starts with `re_`, and
    Resend only shows it once. Paste it somewhere safe for the next step, such as a note
    you'll delete afterwards.
