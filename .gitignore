@@ -26,3 +26,6 @@ portal/worker-configuration.d.ts
 
 # Local Claude app settings
 .claude/
+
+# Graphify knowledge graph (local only)
+graphify-out/
