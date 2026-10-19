@@ -10,6 +10,11 @@ You don't need to know how to code. Follow the steps in order.
 > about problems, emails you when they do, and hosts an honest accessibility statement
 > for your website. It does **not** make your website "compliant" by itself. Only fixing
 > the problems on your website does that.
+>
+> **Use at your own risk.** The portal is free and comes with no promises or
+> guarantees, and nothing here is legal advice. Once it's set up, your portal and the
+> visitor information it collects are your responsibility. See the
+> [disclaimer](../DISCLAIMER.md).
 
 **Contents**
 

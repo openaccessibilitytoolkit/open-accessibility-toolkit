@@ -6,6 +6,9 @@ accessibility.
 
 > Automated checks catch only part of WCAG. This toolkit does not make a site
 > "compliant" on its own; people still need to verify the rest.
+>
+> **Use at your own risk.** It's free and comes with no promises or guarantees, and
+> it isn't legal advice. See the [disclaimer](DISCLAIMER.md).
 
 ## Principles (decided 2026-10-15)
 
@@ -173,3 +176,8 @@ Options:
 Outputs: `problems`, `elements` and `pages`, for use in later steps.
 
 The action sets up Node.js 24 for the rest of the job.
+
+## License and disclaimer
+
+Free and open source under the [MIT License](LICENSE). Use at your own risk: see the
+[disclaimer](DISCLAIMER.md). To report a security problem, see [SECURITY.md](SECURITY.md).

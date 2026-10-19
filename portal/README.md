@@ -8,6 +8,11 @@ else sees the reports.
 The portal records and organizes reports. It does not make a website "compliant";
 fixing the website does that.
 
+**Use at your own risk.** The portal is free and comes with no promises or guarantees,
+and it isn't legal advice. You're responsible for your own portal and the visitor
+information it collects. See the
+[disclaimer](https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit/blob/main/DISCLAIMER.md).
+
 ## Get your own portal (free)
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit/tree/main/portal)
