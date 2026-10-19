@@ -1,7 +1,7 @@
 // The public pages: the report form, the thank-you page, and friendly errors.
 
 import type { Site } from "./db.js";
-import { Layout } from "./layout.js";
+import { Layout, SiteHeader } from "./layout.js";
 import { HONEYPOT_FIELD } from "./safeguards.js";
 import { ASSISTIVE_TECH, LIMITS, type FieldError, type ReportInput } from "./validate.js";
 
@@ -25,7 +25,7 @@ export function ReportForm(props: { site: Site; values?: ReportInput; errors?: F
   const title = `Report an accessibility problem - ${site.organization}`;
 
   return (
-    <Layout title={errors.length ? `Error: ${title}` : title}>
+    <Layout title={errors.length ? `Error: ${title}` : title} header={<SiteHeader name={site.organization} subtitle="Accessibility" />}>
       {errors.length > 0 && (
         <div class="error-summary" tabindex={-1} autofocus aria-labelledby="error-summary-title">
           <h2 id="error-summary-title">Please fix {plural(errors.length, "thing")}</h2>
@@ -40,12 +40,12 @@ export function ReportForm(props: { site: Site; values?: ReportInput; errors?: F
       )}
 
       <h1>Report an accessibility problem</h1>
-      <p>
+      <p class="lead">
         Tell {site.organization} about anything on {host(site)} that is hard or impossible to use. We read every
         report.
       </p>
 
-      <form method="post" action={`/report/${site.id}`} novalidate>
+      <form method="post" action={`/report/${site.id}`} class="card" novalidate>
         <div class="field">
           <label for="description">What went wrong? (required)</label>
           <p id="description-hint" class="hint">
@@ -151,20 +151,25 @@ export function ReportForm(props: { site: Site; values?: ReportInput; errors?: F
 export function ThankYou(props: { site: Site; reference?: string }) {
   const { site, reference } = props;
   return (
-    <Layout title={`Thank you - ${site.organization}`}>
-      <h1>Thank you, we've received your report</h1>
-      {reference && (
+    <Layout
+      title={`Thank you - ${site.organization}`}
+      header={<SiteHeader name={site.organization} subtitle="Accessibility" />}
+    >
+      <div class="card success">
+        <h1>Thank you, we've received your report</h1>
+        {reference && (
+          <p>
+            Your reference number is <span class="reference">{reference}</span>
+          </p>
+        )}
         <p>
-          Your reference number is <span class="reference">{reference}</span>
+          {site.organization} aims to reply within {plural(site.reply_days, "working day")}. If you gave your email
+          address, we've sent you a confirmation.
         </p>
-      )}
-      <p>
-        {site.organization} aims to reply within {plural(site.reply_days, "working day")}. If you gave your email
-        address, we've sent you a confirmation.
-      </p>
-      <p>
-        <a href={site.website}>Back to {host(site)}</a>
-      </p>
+        <p>
+          <a href={site.website}>Back to {host(site)}</a>
+        </p>
+      </div>
     </Layout>
   );
 }
@@ -172,13 +177,15 @@ export function ThankYou(props: { site: Site; reference?: string }) {
 export function Message(props: { title: string; children: string; link?: { href: string; text: string } }) {
   return (
     <Layout title={props.title}>
-      <h1>{props.title}</h1>
-      <p>{props.children}</p>
-      {props.link && (
-        <p>
-          <a href={props.link.href}>{props.link.text}</a>
-        </p>
-      )}
+      <div class="card">
+        <h1>{props.title}</h1>
+        <p>{props.children}</p>
+        {props.link && (
+          <p>
+            <a href={props.link.href}>{props.link.text}</a>
+          </p>
+        )}
+      </div>
     </Layout>
   );
 }

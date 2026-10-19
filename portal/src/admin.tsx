@@ -2,32 +2,62 @@
 
 import type { Child } from "hono/jsx";
 import { reference, type ReportRow, type Site } from "./db.js";
-import { Layout } from "./layout.js";
+import { Layout, SiteHeader } from "./layout.js";
 import { STATUSES, describeEvent, formatTime, type TimelineEvent } from "./timeline.js";
 import { ASSISTIVE_TECH, type AssistiveTech } from "./validate.js";
 
-function AdminHeader(props: { email: string }) {
+export type AdminSection = "reports" | "sites" | "setup";
+
+const SECTIONS: [AdminSection, string, string][] = [
+  ["reports", "/admin", "Reports"],
+  ["sites", "/admin/sites", "Websites"],
+  ["setup", "/admin/setup", "Check my setup"],
+];
+
+function AdminHeader(props: { email: string; section?: AdminSection; sectionHome?: boolean }) {
   return (
-    <header class="site-header">
-      <nav aria-label="Portal">
-        <a href="/admin">Reports</a>
-        <a href="/admin/sites">Websites</a>
-        <a href="/admin/setup">Check my setup</a>
-        <a href="/admin/reports.csv">Download spreadsheet</a>
+    <SiteHeader name="Accessibility portal" href="/admin">
+      <div class="account">
         <span class="who">Logged in as {props.email}</span>
         <form method="post" action="/admin/logout">
           <button type="submit" class="link-button">
             Log out
           </button>
         </form>
+      </div>
+      <nav aria-label="Portal">
+        <ul>
+          {SECTIONS.map(([key, href, text]) => (
+            <li>
+              <a href={href} aria-current={props.section === key ? (props.sectionHome ? "page" : "true") : undefined}>
+                {text}
+              </a>
+            </li>
+          ))}
+          <li>
+            <a href="/admin/reports.csv">Download spreadsheet</a>
+          </li>
+        </ul>
       </nav>
-    </header>
+    </SiteHeader>
   );
 }
 
-export function AdminLayout(props: { title: string; email: string; children: Child }) {
+export function AdminLayout(props: {
+  title: string;
+  email: string;
+  children: Child;
+  /** Which part of the portal this page belongs to, to show it in the menu. */
+  section?: AdminSection;
+  /** True on the section's main page, false on pages inside it. */
+  sectionHome?: boolean;
+}) {
   return (
-    <Layout title={`${props.title} - Accessibility portal`} header={<AdminHeader email={props.email} />} wide>
+    <Layout
+      title={`${props.title} - Accessibility portal`}
+      header={<AdminHeader email={props.email} section={props.section} sectionHome={props.sectionHome} />}
+      wide
+    >
       {props.children}
     </Layout>
   );
@@ -35,9 +65,14 @@ export function AdminLayout(props: { title: string; email: string; children: Chi
 
 // ---- Login ----
 
+/** The header for the login pages: just the wordmark, as there's nowhere else to go yet. */
+function PortalHeader() {
+  return <SiteHeader name="Accessibility portal" />;
+}
+
 export function LoginPage(props: { sent?: boolean; error?: string; email?: string }) {
   return (
-    <Layout title={`${props.error ? "Error: " : ""}Log in - Accessibility portal`}>
+    <Layout title={`${props.error ? "Error: " : ""}Log in - Accessibility portal`} header={<PortalHeader />}>
       <h1>Log in to your accessibility portal</h1>
       {props.sent ? (
         <div class="saved" tabindex={-1} autofocus>
@@ -47,9 +82,9 @@ export function LoginPage(props: { sent?: boolean; error?: string; email?: strin
           </p>
         </div>
       ) : (
-        <p>We'll email you a link to log in. No password needed.</p>
+        <p class="lead">We'll email you a link to log in. No password needed.</p>
       )}
-      <form method="post" action="/admin/login" novalidate>
+      <form method="post" action="/admin/login" class="card" novalidate>
         <div class="field">
           <label for="email">Your email</label>
           {props.error && (
@@ -77,10 +112,10 @@ export function LoginPage(props: { sent?: boolean; error?: string; email?: strin
 /** The page the login link opens. The extra click stops email virus-scanners from using up the link. */
 export function VerifyPage(props: { token: string }) {
   return (
-    <Layout title="Log in - Accessibility portal">
+    <Layout title="Log in - Accessibility portal" header={<PortalHeader />}>
       <h1>Log in</h1>
-      <p>Press the button to finish logging in on this device. You'll stay logged in for 7 days.</p>
-      <form method="post" action="/admin/login/verify">
+      <form method="post" action="/admin/login/verify" class="card">
+        <p>Press the button to finish logging in on this device. You'll stay logged in for 7 days.</p>
         <input type="hidden" name="token" value={props.token} />
         <button type="submit">Log me in</button>
       </form>
@@ -93,6 +128,11 @@ export function VerifyPage(props: { token: string }) {
 function excerpt(text: string, max = 120): string {
   const flat = text.replace(/\s+/g, " ").trim();
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+}
+
+/** The status as a coloured badge. The words carry the meaning; the colour only helps scanning. */
+function StatusBadge(props: { status: string }) {
+  return <span class={`badge ${props.status}`}>{STATUSES[props.status as keyof typeof STATUSES] ?? props.status}</span>;
 }
 
 
@@ -117,7 +157,7 @@ export function InboxPage(props: {
     return q ? `/admin?${q}` : "/admin";
   };
   return (
-    <AdminLayout title="Reports" email={props.email}>
+    <AdminLayout title="Reports" email={props.email} section="reports" sectionHome>
       {props.deleted && (
         <div class="saved" tabindex={-1} autofocus>
           <p>Report {props.deleted} was deleted.</p>
@@ -126,16 +166,15 @@ export function InboxPage(props: {
       <h1>Accessibility reports</h1>
       <ul class="counts" aria-label="Reports by status">
         {Object.entries(STATUSES).map(([key, label]) => (
-          <li>
+          <li class={key}>
             {label}: <strong>{counts[key] ?? 0}</strong>
           </li>
         ))}
       </ul>
 
-      <form method="get" action="/admin" class="filters">
+      <form method="get" action="/admin" class="filters card">
         <div>
           <label for="site">Website</label>
-          <br />
           <select id="site" name="site">
             <option value="">All websites</option>
             {sites.map((s) => (
@@ -147,7 +186,6 @@ export function InboxPage(props: {
         </div>
         <div>
           <label for="status">Status</label>
-          <br />
           <select id="status" name="status">
             <option value="">All statuses</option>
             {Object.entries(STATUSES).map(([key, label]) => (
@@ -161,42 +199,46 @@ export function InboxPage(props: {
       </form>
 
       {sites.length === 0 ? (
-        <p>
+        <p class="card">
           You haven't added a website yet. <a href="/admin/sites/new">Add your first website</a> to get your report form
           and accessibility statement.
         </p>
       ) : reports.length === 0 ? (
-        <p>No reports match. When visitors report a problem, it will appear here.</p>
+        <p class="card">No reports match. When visitors report a problem, it will appear here.</p>
       ) : (
-        <table>
-          <caption>Reports, newest first</caption>
-          <thead>
-            <tr>
-              <th scope="col">Reference</th>
-              <th scope="col">Website</th>
-              <th scope="col">Received</th>
-              <th scope="col">Status</th>
-              <th scope="col">What went wrong</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reports.map((r) => (
+        <div class="card table-card" role="region" aria-label="Reports" tabindex={0}>
+          <table>
+            <caption>Reports, newest first</caption>
+            <thead>
               <tr>
-                <td>
-                  <a href={`/admin/reports/${r.id}`}>{reference(r.id)}</a>
-                </td>
-                <td>{new URL(r.website).host}</td>
-                <td>{formatTime(r.received_at, props.timeZone)}</td>
-                <td>{STATUSES[r.status as keyof typeof STATUSES] ?? r.status}</td>
-                <td>{excerpt(r.description)}</td>
+                <th scope="col">Reference</th>
+                <th scope="col">Website</th>
+                <th scope="col">Received</th>
+                <th scope="col">Status</th>
+                <th scope="col">What went wrong</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {reports.map((r) => (
+                <tr>
+                  <td>
+                    <a href={`/admin/reports/${r.id}`}>{reference(r.id)}</a>
+                  </td>
+                  <td>{new URL(r.website).host}</td>
+                  <td>{formatTime(r.received_at, props.timeZone)}</td>
+                  <td>
+                    <StatusBadge status={r.status} />
+                  </td>
+                  <td>{excerpt(r.description)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       {(page > 1 || props.hasMore) && (
         <nav aria-label="More reports">
-          <p>
+          <p class="pager">
             {page > 1 && <a href={query(page - 1)}>Newer reports</a>}
             {page > 1 && props.hasMore && " · "}
             {props.hasMore && <a href={query(page + 1)}>Older reports</a>}
@@ -226,7 +268,7 @@ export function ReportPage(props: {
     // Leave it empty if the stored list is unreadable.
   }
   return (
-    <AdminLayout title={`${props.error ? "Error: " : ""}Report ${ref}`} email={props.email}>
+    <AdminLayout title={`${props.error ? "Error: " : ""}Report ${ref}`} email={props.email} section="reports">
       {props.saved && (
         <div class="saved" tabindex={-1} autofocus>
           <p>Your changes were saved.</p>
@@ -236,79 +278,94 @@ export function ReportPage(props: {
         <a href="/admin">Back to all reports</a>
       </p>
       <h1>Report {ref}</h1>
-      <dl class="details">
-        <dt>Website</dt>
-        <dd>
-          {report.organization} ({new URL(report.website).host})
-        </dd>
-        <dt>Received</dt>
-        <dd>{formatTime(report.received_at, props.timeZone)}</dd>
-        <dt>Status</dt>
-        <dd>{STATUSES[report.status as keyof typeof STATUSES] ?? report.status}</dd>
-        <dt>Page</dt>
-        <dd>{report.page || "Not given"}</dd>
-        <dt>How they were using the site</dt>
-        <dd>{howUsed.length ? howUsed.join("; ") : "Not given"}</dd>
-        <dt>Visitor's email</dt>
-        <dd>
-          {report.email ? (
-            <a href={`mailto:${report.email}?subject=${encodeURIComponent(`Your accessibility report ${ref}`)}`}>
-              {report.email}
-            </a>
-          ) : (
-            "Not given"
-          )}
-        </dd>
-        <dt>What went wrong</dt>
-        <dd>{report.description}</dd>
-      </dl>
-
-      <h2>Update this report</h2>
-      <form method="post" action={`/admin/reports/${report.id}`}>
-        <fieldset>
-          <legend>Status</legend>
-          {Object.entries(STATUSES).map(([key, label]) => (
-            <div class="choice">
-              <input type="radio" id={`status-${key}`} name="status" value={key} checked={report.status === key} />
-              <label for={`status-${key}`}>{label}</label>
-            </div>
-          ))}
-        </fieldset>
-        <div class="field">
-          <label for="note">Add a note (optional)</label>
-          <p id="note-hint" class="hint">
-            For example, what you changed to fix it. Notes are only seen by people who can log in here.
-          </p>
-          {props.error && (
-            <p id="note-error" class="error-message">
-              Error: {props.error}
-            </p>
-          )}
-          <textarea
-            id="note"
-            name="note"
-            rows={3}
-            maxlength={2000}
-            aria-describedby={props.error ? "note-hint note-error" : "note-hint"}
-            aria-invalid={props.error ? "true" : undefined}
-          ></textarea>
+      <div class="report-layout">
+        <div class="card details-card">
+          <h2>Details</h2>
+          <dl class="details">
+            <dt>Website</dt>
+            <dd>
+              {report.organization} ({new URL(report.website).host})
+            </dd>
+            <dt>Received</dt>
+            <dd>{formatTime(report.received_at, props.timeZone)}</dd>
+            <dt>Status</dt>
+            <dd>
+              <StatusBadge status={report.status} />
+            </dd>
+            <dt>Page</dt>
+            <dd>{report.page || "Not given"}</dd>
+            <dt>How they were using the site</dt>
+            <dd>{howUsed.length ? howUsed.join("; ") : "Not given"}</dd>
+            <dt>Visitor's email</dt>
+            <dd>
+              {report.email ? (
+                <a href={`mailto:${report.email}?subject=${encodeURIComponent(`Your accessibility report ${ref}`)}`}>
+                  {report.email}
+                </a>
+              ) : (
+                "Not given"
+              )}
+            </dd>
+            <dt>What went wrong</dt>
+            <dd class="description">{report.description}</dd>
+          </dl>
         </div>
-        <button type="submit">Save</button>
-      </form>
 
-      <h2>Timeline</h2>
-      <ol class="timeline">
-        {props.events.map((e) => (
-          <li>
-            <time datetime={e.at}>{formatTime(e.at, props.timeZone)}</time>: {describeEvent(e)}
-          </li>
-        ))}
-      </ol>
+        <div class="card update-card">
+          <h2>Update this report</h2>
+          <form method="post" action={`/admin/reports/${report.id}`}>
+            <fieldset>
+              <legend>Status</legend>
+              {Object.entries(STATUSES).map(([key, label]) => (
+                <div class="choice">
+                  <input type="radio" id={`status-${key}`} name="status" value={key} checked={report.status === key} />
+                  <label for={`status-${key}`}>{label}</label>
+                </div>
+              ))}
+            </fieldset>
+            <div class="field">
+              <label for="note">Add a note (optional)</label>
+              <p id="note-hint" class="hint">
+                For example, what you changed to fix it. Notes are only seen by people who can log in here.
+              </p>
+              {props.error && (
+                <p id="note-error" class="error-message">
+                  Error: {props.error}
+                </p>
+              )}
+              <textarea
+                id="note"
+                name="note"
+                rows={3}
+                maxlength={2000}
+                aria-describedby={props.error ? "note-hint note-error" : "note-hint"}
+                aria-invalid={props.error ? "true" : undefined}
+              ></textarea>
+            </div>
+            <button type="submit">Save</button>
+          </form>
+        </div>
 
-      <h2>Delete</h2>
-      <p>
-        <a href={`/admin/reports/${report.id}/delete`}>Delete this report</a>
-      </p>
+        <div class="card timeline-card">
+          <h2>Timeline</h2>
+          <ol class="timeline">
+            {props.events.map((e) => (
+              <li>
+                <time datetime={e.at}>{formatTime(e.at, props.timeZone)}</time>
+                <span class="visually-hidden">: </span>
+                {describeEvent(e)}
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <div class="card delete-card">
+          <h2>Delete</h2>
+          <p>
+            <a href={`/admin/reports/${report.id}/delete`}>Delete this report</a>
+          </p>
+        </div>
+      </div>
     </AdminLayout>
   );
 }
@@ -316,20 +373,22 @@ export function ReportPage(props: {
 export function DeletePage(props: { email: string; report: ReportRow }) {
   const ref = reference(props.report.id);
   return (
-    <AdminLayout title={`Delete report ${ref}?`} email={props.email}>
-      <h1>Delete report {ref}?</h1>
-      <p>
-        This permanently deletes the report and its whole timeline. <strong>It can't be undone.</strong> If you need a
-        record, download the spreadsheet first.
-      </p>
-      <form method="post" action={`/admin/reports/${props.report.id}/delete`}>
-        <button type="submit" class="danger">
-          Yes, delete it permanently
-        </button>
-      </form>
-      <p>
-        <a href={`/admin/reports/${props.report.id}`}>No, go back to the report</a>
-      </p>
+    <AdminLayout title={`Delete report ${ref}?`} email={props.email} section="reports">
+      <div class="card warning narrow">
+        <h1>Delete report {ref}?</h1>
+        <p>
+          This permanently deletes the report and its whole timeline. <strong>It can't be undone.</strong> If you need
+          a record, download the spreadsheet first.
+        </p>
+        <form method="post" action={`/admin/reports/${props.report.id}/delete`}>
+          <button type="submit" class="danger">
+            Yes, delete it permanently
+          </button>
+        </form>
+        <p>
+          <a href={`/admin/reports/${props.report.id}`}>No, go back to the report</a>
+        </p>
+      </div>
     </AdminLayout>
   );
 }

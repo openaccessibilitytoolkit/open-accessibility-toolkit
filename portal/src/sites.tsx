@@ -19,42 +19,48 @@ function plural(n: number, word: string): string {
 
 export function SitesPage(props: { email: string; sites: Site[]; counts: Record<string, number>; deleted?: string }) {
   return (
-    <AdminLayout title="Websites" email={props.email}>
+    <AdminLayout title="Websites" email={props.email} section="sites" sectionHome>
       {props.deleted && (
         <div class="saved" tabindex={-1} autofocus>
           <p>{props.deleted} and its reports were deleted.</p>
         </div>
       )}
-      <h1>Your websites</h1>
-      <p>
-        <a href="/admin/sites/new">Add a website</a>
-      </p>
+      <div class="page-title">
+        <h1>Your websites</h1>
+        <p>
+          <a href="/admin/sites/new" class="button-link">
+            Add a website
+          </a>
+        </p>
+      </div>
       {props.sites.length === 0 ? (
-        <p>You haven't added a website yet.</p>
+        <p class="card">You haven't added a website yet.</p>
       ) : (
-        <table>
-          <caption>Websites this portal looks after</caption>
-          <thead>
-            <tr>
-              <th scope="col">Website</th>
-              <th scope="col">Organization</th>
-              <th scope="col">Contact email</th>
-              <th scope="col">Reports</th>
-            </tr>
-          </thead>
-          <tbody>
-            {props.sites.map((s) => (
+        <div class="card table-card" role="region" aria-label="Websites" tabindex={0}>
+          <table>
+            <caption>Websites this portal looks after</caption>
+            <thead>
               <tr>
-                <td>
-                  <a href={`/admin/sites/${s.id}`}>{host(s.website)}</a>
-                </td>
-                <td>{s.organization}</td>
-                <td>{s.contact_email}</td>
-                <td>{props.counts[s.id] ?? 0}</td>
+                <th scope="col">Website</th>
+                <th scope="col">Organization</th>
+                <th scope="col">Contact email</th>
+                <th scope="col">Reports</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {props.sites.map((s) => (
+                <tr>
+                  <td>
+                    <a href={`/admin/sites/${s.id}`}>{host(s.website)}</a>
+                  </td>
+                  <td>{s.organization}</td>
+                  <td>{s.contact_email}</td>
+                  <td>{props.counts[s.id] ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </AdminLayout>
   );
@@ -111,7 +117,7 @@ function Field(props: {
 function SiteForm(props: { action: string; values: SiteFormValues; errors: SiteFieldError[]; submit: string }) {
   const { values, errors } = props;
   return (
-    <form method="post" action={props.action} novalidate>
+    <form method="post" action={props.action} class="card" novalidate>
       <Field id="organization" label="Organization name" value={values.organization} errors={errors} autocomplete="organization" />
       <Field
         id="website"
@@ -185,14 +191,18 @@ function ErrorSummary(props: { errors: SiteFieldError[] }) {
 
 export function NewSitePage(props: { email: string; values: SiteFormValues; errors: SiteFieldError[] }) {
   return (
-    <AdminLayout title={`${props.errors.length ? "Error: " : ""}Add a website`} email={props.email}>
-      <ErrorSummary errors={props.errors} />
-      <p>
-        <a href="/admin/sites">Back to your websites</a>
-      </p>
-      <h1>Add a website</h1>
-      <p>You'll get a report form and an accessibility statement for this website, plus footer links to add to it.</p>
-      <SiteForm action="/admin/sites" values={props.values} errors={props.errors} submit="Add website" />
+    <AdminLayout title={`${props.errors.length ? "Error: " : ""}Add a website`} email={props.email} section="sites">
+      <div class="narrow">
+        <ErrorSummary errors={props.errors} />
+        <p>
+          <a href="/admin/sites">Back to your websites</a>
+        </p>
+        <h1>Add a website</h1>
+        <p class="lead">
+          You'll get a report form and an accessibility statement for this website, plus footer links to add to it.
+        </p>
+        <SiteForm action="/admin/sites" values={props.values} errors={props.errors} submit="Add website" />
+      </div>
     </AdminLayout>
   );
 }
@@ -209,70 +219,78 @@ export function SitePage(props: {
   const statementUrl = `${origin}${statementPath(site)}`;
   const reportUrl = `${origin}${reportPath(site)}`;
   return (
-    <AdminLayout title={`${props.errors.length ? "Error: " : ""}${host(site.website)}`} email={props.email}>
-      <ErrorSummary errors={props.errors} />
-      {props.saved && (
-        <div class="saved" tabindex={-1} autofocus>
-          <p>Your changes were saved. Your accessibility statement is already up to date.</p>
-        </div>
-      )}
-      <p>
-        <a href="/admin/sites">Back to your websites</a>
-      </p>
-      <h1>{host(site.website)}</h1>
-
-      <h2>Your pages</h2>
-      <ul>
-        <li>
-          Accessibility statement: <a href={statementPath(site)}>{statementUrl}</a>
-        </li>
-        <li>
-          Report form: <a href={reportPath(site)}>{reportUrl}</a>
-        </li>
-      </ul>
-
-      <h2>Add these links to your website's footer</h2>
-      <div class="field">
-        <label for="footer-code">Footer links (HTML code)</label>
-        <p id="footer-code-hint" class="hint">
-          Select all of this and copy it.
+    <AdminLayout title={`${props.errors.length ? "Error: " : ""}${host(site.website)}`} email={props.email} section="sites">
+      <div class="narrow">
+        <ErrorSummary errors={props.errors} />
+        {props.saved && (
+          <div class="saved" tabindex={-1} autofocus>
+            <p>Your changes were saved. Your accessibility statement is already up to date.</p>
+          </div>
+        )}
+        <p>
+          <a href="/admin/sites">Back to your websites</a>
         </p>
-        <textarea id="footer-code" rows={6} readonly aria-describedby="footer-code-hint">
-          {footerHtml(site, origin)}
-        </textarea>
+        <h1>{host(site.website)}</h1>
+
+        <div class="card">
+          <h2>Your pages</h2>
+          <ul class="url-list">
+            <li>
+              Accessibility statement: <a href={statementPath(site)}>{statementUrl}</a>
+            </li>
+            <li>
+              Report form: <a href={reportPath(site)}>{reportUrl}</a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>Add these links to your website's footer</h2>
+          <div class="field">
+            <label for="footer-code">Footer links (HTML code)</label>
+            <p id="footer-code-hint" class="hint">
+              Select all of this and copy it.
+            </p>
+            <textarea id="footer-code" rows={6} readonly aria-describedby="footer-code-hint">
+              {footerHtml(site, origin)}
+            </textarea>
+          </div>
+          <details>
+            <summary>How to add them in WordPress, Squarespace, Wix or Shopify</summary>
+            <ul>
+              <li>
+                <strong>WordPress:</strong> edit your footer (Appearance, then Editor or Widgets), add a "Custom HTML"
+                block, and paste the code.
+              </li>
+              <li>
+                <strong>Squarespace:</strong> edit the footer, add a "Code" block, and paste the code.
+              </li>
+              <li>
+                <strong>Wix:</strong> edit the footer and add two text links: "Accessibility statement" linking to{" "}
+                {statementUrl}, and "Report an accessibility problem" linking to {reportUrl}.
+              </li>
+              <li>
+                <strong>Shopify:</strong> go to Content, then Menus, open your footer menu, and add the same two links
+                as for Wix.
+              </li>
+              <li>
+                <strong>Your own HTML:</strong> paste the code into your footer.
+              </li>
+            </ul>
+            <p>Menu names change from time to time, so look for something similar if yours differs.</p>
+          </details>
+        </div>
+
+        <h2>Settings</h2>
+        <SiteForm action={`/admin/sites/${site.id}`} values={props.values} errors={props.errors} submit="Save changes" />
+
+        <div class="card">
+          <h2>Delete this website</h2>
+          <p>
+            <a href={`/admin/sites/${site.id}/delete`}>Delete {host(site.website)} and its reports</a>
+          </p>
+        </div>
       </div>
-      <details>
-        <summary>How to add them in WordPress, Squarespace, Wix or Shopify</summary>
-        <ul>
-          <li>
-            <strong>WordPress:</strong> edit your footer (Appearance, then Editor or Widgets), add a "Custom HTML" block,
-            and paste the code.
-          </li>
-          <li>
-            <strong>Squarespace:</strong> edit the footer, add a "Code" block, and paste the code.
-          </li>
-          <li>
-            <strong>Wix:</strong> edit the footer and add two text links: "Accessibility statement" linking to{" "}
-            {statementUrl}, and "Report an accessibility problem" linking to {reportUrl}.
-          </li>
-          <li>
-            <strong>Shopify:</strong> go to Content, then Menus, open your footer menu, and add the same two links as
-            for Wix.
-          </li>
-          <li>
-            <strong>Your own HTML:</strong> paste the code into your footer.
-          </li>
-        </ul>
-        <p>Menu names change from time to time, so look for something similar if yours differs.</p>
-      </details>
-
-      <h2>Settings</h2>
-      <SiteForm action={`/admin/sites/${site.id}`} values={props.values} errors={props.errors} submit="Save changes" />
-
-      <h2>Delete this website</h2>
-      <p>
-        <a href={`/admin/sites/${site.id}/delete`}>Delete {host(site.website)} and its reports</a>
-      </p>
     </AdminLayout>
   );
 }
@@ -280,26 +298,28 @@ export function SitePage(props: {
 export function DeleteSitePage(props: { email: string; site: Site; reportCount: number }) {
   const name = host(props.site.website);
   return (
-    <AdminLayout title={`Delete ${name}?`} email={props.email}>
-      <h1>Delete {name}?</h1>
-      <p>
-        This permanently deletes the website, <strong>its {plural(props.reportCount, "report")}</strong> and their
-        timelines. Its report form and accessibility statement will stop working.{" "}
-        <strong>It can't be undone.</strong>
-      </p>
-      {props.reportCount > 0 && (
+    <AdminLayout title={`Delete ${name}?`} email={props.email} section="sites">
+      <div class="card warning narrow">
+        <h1>Delete {name}?</h1>
         <p>
-          If you need a record, <a href="/admin/reports.csv">download the spreadsheet</a> first.
+          This permanently deletes the website, <strong>its {plural(props.reportCount, "report")}</strong> and their
+          timelines. Its report form and accessibility statement will stop working.{" "}
+          <strong>It can't be undone.</strong>
         </p>
-      )}
-      <form method="post" action={`/admin/sites/${props.site.id}/delete`}>
-        <button type="submit" class="danger">
-          Yes, delete it permanently
-        </button>
-      </form>
-      <p>
-        <a href={`/admin/sites/${props.site.id}`}>No, go back</a>
-      </p>
+        {props.reportCount > 0 && (
+          <p>
+            If you need a record, <a href="/admin/reports.csv">download the spreadsheet</a> first.
+          </p>
+        )}
+        <form method="post" action={`/admin/sites/${props.site.id}/delete`}>
+          <button type="submit" class="danger">
+            Yes, delete it permanently
+          </button>
+        </form>
+        <p>
+          <a href={`/admin/sites/${props.site.id}`}>No, go back</a>
+        </p>
+      </div>
     </AdminLayout>
   );
 }

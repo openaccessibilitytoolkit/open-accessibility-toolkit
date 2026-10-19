@@ -69,7 +69,7 @@ export function SetupPage(props: {
   const attention = props.checks.filter((c) => c.state === "attention").length
     + props.footers.filter((f) => f.state === "attention").length;
   return (
-    <AdminLayout title="Check my setup" email={props.email}>
+    <AdminLayout title="Check my setup" email={props.email} section="setup" sectionHome>
       {props.testResult && (
         <div class={props.testResult.ok ? "saved" : "error-summary"} tabindex={-1} autofocus>
           <p>{props.testResult.message}</p>
