@@ -15,6 +15,10 @@ fixing the website does that.
 New to this? Follow the **[step-by-step setup guide](https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit/blob/main/docs/setup-guide.md)**.
 No coding needed: three free accounts, one button, about 30 minutes.
 
+**Already have a portal?** Your copy doesn't get fixes by itself. Update it with one click:
+see **[Keep your portal safe and up to date](https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit/blob/main/docs/setup-guide.md#9-keep-your-portal-safe-and-up-to-date)**.
+To report a security problem, see [SECURITY.md](https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit/blob/main/SECURITY.md).
+
 **Status:** early, and live.
 
 **Live demo:** the [report form](https://open-a11y-portal.openaccessibilitytoolkit.workers.dev/report/joesbakery-example)
@@ -111,7 +115,8 @@ as a failed email.
 
 ## Put your own copy on Cloudflare (command line)
 
-For developers. A step-by-step guide for everyone else is coming.
+For developers. Everyone else, use the
+[step-by-step setup guide](https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit/blob/main/docs/setup-guide.md).
 
 1. Sign in to Cloudflare: `npx wrangler login`. On Windows, if the browser can't reach
    `localhost` afterwards, use `npx wrangler login --device` instead. If PowerShell
@@ -125,6 +130,8 @@ For developers. A step-by-step guide for everyone else is coming.
 4. Optional: `npx wrangler secret put EMAIL_FROM` and `npx wrangler secret put TIME_ZONE`.
 5. Go to `https://<your-portal>.workers.dev/admin`, log in, and add your website under
    **Websites**.
+6. To update later: get the latest code (`git pull`), then `npm run deploy` again.
+   Your data and secrets stay as they are.
 
 ## Tests
 

@@ -21,7 +21,8 @@ You don't need to know how to code. Follow the steps in order.
 6. [Add the footer links to your website](#6-add-the-footer-links-to-your-website)
 7. [Verify your domain in Resend](#7-verify-your-domain-in-resend)
 8. [Check your setup](#8-check-your-setup)
-9. [If something goes wrong](#9-if-something-goes-wrong)
+9. [Keep your portal safe and up to date](#9-keep-your-portal-safe-and-up-to-date)
+10. [If something goes wrong](#10-if-something-goes-wrong)
 
 ---
 
@@ -50,7 +51,7 @@ Cmd+Shift+N). That keeps your other logins out of the way.
 Use the same email address for all three.
 
 1. **GitHub** at [github.com/signup](https://github.com/signup). This is where your
-   copy of the portal is kept. Turn on two-factor login when it asks.
+   copy of the portal is kept.
 2. **Cloudflare** at [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up).
    This runs your portal. If it asks you to add a website or pick a plan, skip it or
    choose **Free**.
@@ -59,6 +60,16 @@ Use the same email address for all three.
 
 Remember which email address you used for **Resend**. Until step 7 is done, Resend
 only sends emails to that address.
+
+**Turn on two-factor login for all three accounts**, and for the email account you
+use with them. Two-factor login (also called 2FA or two-step verification) asks for a
+code from your phone as well as your password, so a stolen password isn't enough to get
+in. Look for it in each account's security settings; GitHub asks you to set it up when
+you sign up.
+
+The email account matters most: **anyone who can read your email can log in to your
+portal**, because the portal logs you in with links sent by email. In Gmail, it's
+called **2-Step Verification**, under your Google Account's **Security** page.
 
 ## 3. Get your Resend key
 
@@ -195,7 +206,36 @@ needs attention:
 
 Fix anything marked **Needs attention**, and you're done. 🎉
 
-## 9. If something goes wrong
+## 9. Keep your portal safe and up to date
+
+Your portal is your own copy, so improvements and security fixes from the Open
+Accessibility Toolkit project don't reach it by themselves. Updating takes one click.
+
+**To update your portal:**
+
+1. On [github.com](https://github.com), open your copy of the portal: click your
+   profile picture, then **Repositories**. It's named after your portal's **project
+   name** from step 4.
+2. Click **Actions** along the top. If GitHub asks whether to enable workflows, say yes.
+3. On the left, click **Update my portal**.
+4. Click **Run workflow**, then the green **Run workflow** button that appears.
+5. After about a minute, a green tick appears. Click the run to see either **Your
+   portal was updated** or **Your portal is already up to date**. Cloudflare publishes
+   the update a minute or two later.
+
+The update never touches your reports, your settings in Cloudflare (like your Resend
+key), or the file that holds your portal's name and database (`wrangler.jsonc`).
+
+**To hear about updates:** go to the
+[project's GitHub page](https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit),
+click **Watch**, then **Custom**, tick **Releases**, and click **Apply**. GitHub emails
+you whenever there's an update you should get, especially security fixes.
+
+**Keep your accounts safe:** keep two-factor login on (step 2), and if someone shouldn't
+log in any more, remove their address from **ADMIN_EMAILS** in Cloudflare. That logs
+them out straight away.
+
+## 10. If something goes wrong
 
 **I didn't get the login email.**
 Check your spam folder. Until step 7 is done, the email only reaches the address you
@@ -224,6 +264,19 @@ Cloudflare may connect the new copy to the first portal's database because they 
 name. After it's created, check under your Worker's **Bindings** that **DB** points to a
 database with the new name. If not, ask a developer to set `database_name` and
 `database_id` in the copy's `wrangler.jsonc`.
+
+**"Update my portal" shows a red cross.**
+Nothing was changed, and your portal keeps running as before. Click the run to read the
+message, and try again later. If it keeps failing, open an issue on the
+[project's GitHub page](https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit/issues).
+
+**I don't see "Update my portal" under Actions.**
+Your portal was made before the update button existed. Add it once: in your copy on
+GitHub, click **Add file**, then **Create new file**. Name it
+`.github/workflows/update-portal.yml` (type it exactly, slashes included). Paste in
+everything from
+[this file](https://raw.githubusercontent.com/openaccessibilitytoolkit/open-accessibility-toolkit/main/portal/.github/workflows/update-portal.yml),
+then click **Commit changes**.
 
 **I want more people to be able to log in.**
 In Cloudflare, edit **ADMIN_EMAILS** and add their addresses, separated by commas.

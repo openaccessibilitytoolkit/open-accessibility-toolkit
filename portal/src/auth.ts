@@ -91,6 +91,21 @@ export async function getSessionEmail(
   return row && isAdmin(adminSetting, row.email) ? row.email : null;
 }
 
+/**
+ * Clears out what's no longer needed: expired login links and sessions, old
+ * robot-counting rows, and auto-reply records from before yesterday. Runs on
+ * each login, so the database doesn't keep piling up.
+ */
+export async function deleteExpired(db: D1Database, now: number): Promise<void> {
+  const beforeYesterday = new Date(now - DAY).toISOString().slice(0, 10);
+  await db.batch([
+    db.prepare("DELETE FROM login_tokens WHERE expires_at <= ?").bind(now),
+    db.prepare("DELETE FROM sessions WHERE expires_at <= ?").bind(now),
+    db.prepare("DELETE FROM rate_limits WHERE window_start <= ?").bind(now - DAY),
+    db.prepare("DELETE FROM auto_replies WHERE day < ?").bind(beforeYesterday),
+  ]);
+}
+
 export async function deleteSession(db: D1Database, token: string | undefined): Promise<void> {
   if (token) await db.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256(token)).run();
 }

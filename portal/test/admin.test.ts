@@ -121,6 +121,36 @@ describe("logging in", () => {
     expect((await post("/admin/login/verify", { token: "made-up" })).status).toBe(400);
   });
 
+  it("clears out expired login links, sessions and old counters when someone logs in", async () => {
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    const date = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM auto_replies"),
+      env.DB.prepare(
+        `INSERT INTO login_tokens (token_hash, email, created_at, expires_at) VALUES
+         ('old-link', ?1, ?2, ?3), ('fresh-link', ?1, ?4, ?5)`,
+      ).bind(OWNER, now - 2 * day, now - 2 * day + 15 * 60 * 1000, now, now + 15 * 60 * 1000),
+      env.DB.prepare("INSERT INTO sessions (token_hash, email, expires_at) VALUES ('old-session', ?1, ?2), ('fresh-session', ?1, ?3)")
+        .bind(OWNER, now - 1000, now + day),
+      env.DB.prepare("INSERT INTO rate_limits (key, window_start, count) VALUES ('old-visitor', ?, 1), ('fresh-visitor', ?, 1)")
+        .bind(now - 2 * day, now - 60 * 1000),
+      env.DB.prepare("INSERT INTO auto_replies (email_hash, day) VALUES ('old-reply', ?), ('fresh-reply', ?)")
+        .bind(date(now - 3 * day), date(now)),
+    ]);
+
+    const token = (await createLoginToken(env.DB, OWNER, now))!;
+    expect((await post("/admin/login/verify", { token })).status).toBe(303);
+
+    const keys = async (sql: string) => (await env.DB.prepare(sql).all<{ k: string }>()).results.map((r) => r.k);
+    expect(await keys("SELECT token_hash AS k FROM login_tokens")).not.toContain("old-link");
+    expect(await keys("SELECT token_hash AS k FROM login_tokens")).toContain("fresh-link");
+    expect(await keys("SELECT token_hash AS k FROM sessions")).not.toContain("old-session");
+    expect(await keys("SELECT token_hash AS k FROM sessions")).toContain("fresh-session");
+    expect(await keys("SELECT key AS k FROM rate_limits")).toEqual(["fresh-visitor"]);
+    expect(await keys("SELECT email_hash AS k FROM auto_replies")).toEqual(["fresh-reply"]);
+  });
+
   it("stores only hashes of login links and sessions", async () => {
     const token = (await createLoginToken(env.DB, OWNER, Date.now()))!;
     const row = await env.DB.prepare("SELECT token_hash FROM login_tokens").first<{ token_hash: string }>();

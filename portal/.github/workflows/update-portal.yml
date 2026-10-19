@@ -1,0 +1,73 @@
+# The "Update my portal" button. It only runs in your own copy of the portal (the
+# one the Deploy to Cloudflare button made for you), never in the main project.
+#
+# To use it: in your copy on GitHub, open Actions, choose "Update my portal",
+# then "Run workflow". It downloads the latest portal from the Open Accessibility
+# Toolkit project and saves it in your copy. Cloudflare then publishes it by itself.
+#
+# It never touches your reports, your secret settings (like your Resend key), or
+# wrangler.jsonc, which holds your own portal and database names.
+
+name: Update my portal
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-portal
+
+env:
+  PROJECT: openaccessibilitytoolkit/open-accessibility-toolkit
+  BRANCH: main
+
+jobs:
+  update:
+    name: Update my portal
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download the latest portal
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/download"
+          curl -fsSL "https://codeload.github.com/$PROJECT/tar.gz/refs/heads/$BRANCH" | tar -xz -C "$RUNNER_TEMP/download"
+          latest=$(echo "$RUNNER_TEMP"/download/*/portal)
+          if [ ! -f "$latest/package.json" ] || [ ! -f "$latest/src/index.tsx" ]; then
+            echo "::error::The download didn't look like the portal, so nothing was changed. Please try again later."
+            exit 1
+          fi
+          echo "LATEST=$latest" >> "$GITHUB_ENV"
+
+      - name: Replace the portal's files, keeping your own settings
+        run: |
+          set -euo pipefail
+          # Remove the old files, so files the project deleted are deleted here too.
+          # Keep: Git's own folder, your settings file, and these update instructions.
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .github ! -name wrangler.jsonc -exec rm -rf {} +
+          if [ -d .github ]; then find .github -mindepth 1 -maxdepth 1 ! -name workflows -exec rm -rf {} +; fi
+          # Copy in the latest files, except the ones kept above. (GitHub doesn't let
+          # this button change its own instructions, so .github/workflows stays as it is.)
+          tar -C "$LATEST" --exclude=./.git --exclude=./wrangler.jsonc --exclude=./.github/workflows -cf - . | tar -xf -
+
+      - name: Save the update
+        run: |
+          set -euo pipefail
+          git add -A
+          if git diff --cached --quiet; then
+            echo "### Your portal is already up to date" >> "$GITHUB_STEP_SUMMARY"
+            echo "Nothing needed changing." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          changed=$(git diff --cached --name-only | wc -l)
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Update the portal to the latest version"
+          git push
+          {
+            echo "### Your portal was updated"
+            echo "$changed file(s) changed. Cloudflare will publish the update in a minute or two."
+            echo "Your reports, your secret settings and wrangler.jsonc were not touched."
+          } >> "$GITHUB_STEP_SUMMARY"

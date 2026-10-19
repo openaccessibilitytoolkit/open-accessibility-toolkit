@@ -13,6 +13,7 @@ import {
   consumeLoginToken,
   createLoginToken,
   createSession,
+  deleteExpired,
   deleteSession,
   getSessionEmail,
   isAdmin,
@@ -96,6 +97,7 @@ admin.post("/login/verify", async (c) => {
       400,
     );
   }
+  await deleteExpired(c.env.DB, Date.now());
   const session = await createSession(c.env.DB, email, Date.now());
   setCookie(c, SESSION_COOKIE, session, {
     prefix: "host",
