@@ -97,6 +97,11 @@ const styles = `
   button { font: inherit; font-weight: 600; color: #ffffff; background: var(--brand); border: 2px solid var(--brand);
            border-radius: 8px; padding: 0.6rem 1.5rem; min-height: 2.75rem; cursor: pointer; }
   button:hover { background: var(--brand-dark); border-color: var(--brand-dark); }
+  [hidden] { display: none !important; }
+  .secondary-button { background: var(--surface, #ffffff); color: var(--brand); padding: 0.35rem 0.9rem;
+                      min-height: 2.25rem; font-size: 0.95rem; }
+  .secondary-button:hover { color: #ffffff; }
+  .copy-status { color: #1e6b34; font-weight: 600; }
   .danger { background: var(--error); border-color: var(--error); }
   .danger:hover { background: #8c1d17; border-color: #8c1d17; }
   .secondary { background: none; color: var(--link); text-decoration: underline; padding: 0.75rem 0; border: 0; }

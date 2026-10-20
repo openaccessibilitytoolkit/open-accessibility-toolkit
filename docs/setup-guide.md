@@ -168,7 +168,8 @@ These are two plain links: **"Accessibility statement"** and **"Report an access
 problem"**. You only add them once. When you change anything in your portal, the pages
 they open update by themselves.
 
-On your website's page in the portal, select all of the **footer code** and copy it.
+On your website's page in the portal, click **Copy footer code** (or select all of the
+**footer code** and copy it).
 Then:
 
 - **WordPress:** edit your footer (Appearance, then Editor or Widgets), add a **Custom

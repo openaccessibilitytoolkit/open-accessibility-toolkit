@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **New: Copy buttons.** One click copies your footer code, your statement address or your
+  report form address. Visitors' pages still run no JavaScript at all.
+
 ## 1.2.0 (2026-10-20)
 
 **Portal owners: press "Update my portal" to get this release** (see

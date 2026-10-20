@@ -18,9 +18,12 @@ const app = new Hono<{ Bindings: Bindings }>();
 // Safe defaults for every page: no scripts at all, no framing by other sites.
 app.use(async (c, next) => {
   await next();
+  // Owner pages may run the portal's own copy-button script (and nothing else);
+  // visitors' pages run no JavaScript at all.
+  const scripts = new URL(c.req.url).pathname.startsWith("/admin") ? "'self'" : "'none'";
   c.header(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'none'; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+    `default-src 'self'; script-src ${scripts}; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'`,
   );
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Referrer-Policy", "same-origin");

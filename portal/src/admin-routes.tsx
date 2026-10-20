@@ -81,6 +81,7 @@ import {
   type PersonFormError,
 } from "./people.js";
 import { longDate } from "./statement.js";
+import { COPY_SCRIPT } from "./copy-script.js";
 import { STATUSES, formatTime, isStatus } from "./timeline.js";
 import { ASSISTIVE_TECH, isEmail, type AssistiveTech } from "./validate.js";
 
@@ -102,10 +103,18 @@ admin.use(csrf());
 // Private pages are never kept in shared caches.
 admin.use(async (c, next) => {
   await next();
-  c.header("Cache-Control", "no-store");
+  if (!c.res.headers.has("Cache-Control")) c.header("Cache-Control", "no-store");
 });
 
 // ---- Logging in and out ----
+
+// The copy-button script. Public (it contains nothing private), cached for an hour so updates arrive quickly.
+admin.get("/copy.js", (c) =>
+  c.body(COPY_SCRIPT, 200, {
+    "Content-Type": "text/javascript; charset=utf-8",
+    "Cache-Control": "public, max-age=3600",
+  }),
+);
 
 admin.get("/login", (c) => c.html(<LoginPage />));
 

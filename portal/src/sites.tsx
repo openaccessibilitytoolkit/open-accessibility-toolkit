@@ -5,6 +5,30 @@ import type { Review, Site } from "./db.js";
 import { SITE_LIMITS, type SiteField, type SiteFieldError, type SiteFormValues } from "./site-form.js";
 import { footerHtml, knownProblemList, longDate, reportPath, statementPath } from "./statement.js";
 import { formatTime } from "./timeline.js";
+import { COPY_SCRIPT_PATH } from "./copy-script.js";
+
+/**
+ * A "Copy" button. Hidden until the copy script confirms the browser can copy; the
+ * status next to it announces "Copied" to screen readers too.
+ */
+function CopyButton(props: { id: string; label: string; target?: string; text?: string; primary?: boolean }) {
+  const statusId = `copy-status-${props.id}`;
+  return (
+    <>
+      <button
+        type="button"
+        class={props.primary ? "copy-button" : "copy-button secondary-button"}
+        hidden
+        data-copy-target={props.target}
+        data-copy-text={props.text}
+        data-copy-status={statusId}
+      >
+        {props.label}
+      </button>{" "}
+      <span id={statusId} class="copy-status" role="status"></span>
+    </>
+  );
+}
 
 function host(website: string): string {
   try {
@@ -247,10 +271,12 @@ export function SitePage(props: {
           <h2>Your pages</h2>
           <ul class="url-list">
             <li>
-              Accessibility statement: <a href={statementPath(site)}>{statementUrl}</a>
+              Accessibility statement: <a href={statementPath(site)}>{statementUrl}</a>{" "}
+              <CopyButton text={statementUrl} id="statement-url" label="Copy statement address" />
             </li>
             <li>
-              Report form: <a href={reportPath(site)}>{reportUrl}</a>
+              Report form: <a href={reportPath(site)}>{reportUrl}</a>{" "}
+              <CopyButton text={reportUrl} id="report-url" label="Copy report form address" />
             </li>
           </ul>
           <p>
@@ -264,11 +290,14 @@ export function SitePage(props: {
           <div class="field">
             <label for="footer-code">Footer links (HTML code)</label>
             <p id="footer-code-hint" class="hint">
-              Select all of this and copy it.
+              Press Copy footer code, or select all of this and copy it.
             </p>
             <textarea id="footer-code" rows={6} readonly aria-describedby="footer-code-hint">
               {footerHtml(site, origin)}
             </textarea>
+            <p>
+              <CopyButton target="footer-code" id="footer-code" label="Copy footer code" primary />
+            </p>
           </div>
           <details>
             <summary>How to add them in WordPress, Squarespace, Wix or Shopify</summary>
@@ -296,6 +325,7 @@ export function SitePage(props: {
           </details>
         </div>
 
+        <script src={COPY_SCRIPT_PATH} defer></script>
         <h2 id="settings">Settings</h2>
         <SiteForm action={`/admin/sites/${site.id}`} values={props.values} errors={props.errors} submit="Save changes" />
 

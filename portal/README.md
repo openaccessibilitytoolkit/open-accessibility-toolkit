@@ -95,7 +95,12 @@ for a pretend bakery. Reports sent there reach the project team; please only sen
   really on each website's home page.
 - **No privacy key to invent:** the portal creates its own random key the first time it
   runs and keeps it in its database. (A `HASH_SALT` secret overrides it if you set one.)
-- No JavaScript, strict security headers, and every page passes the toolkit's own
+- **Copy buttons** on each website's page for the footer code and both web addresses.
+  They come from one small script the portal serves itself (`/admin/copy.js`), which only
+  owner pages may run. If the browser blocks the clipboard, it tries the older copy
+  command, and if that fails too, it says so. Without the script, the buttons stay hidden.
+- No JavaScript on visitors' pages (owner pages only run the copy script), strict
+  security headers, and every page passes the toolkit's own
   WCAG 2.2 AA scan, including the error state.
 
 ## Try it on your computer
