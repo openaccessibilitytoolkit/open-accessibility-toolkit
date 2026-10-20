@@ -182,7 +182,7 @@ describe("the public accessibility statement", () => {
     expect(html).toContain(">hello@joesbakery.com</a>");
     expect(html).toContain(`<a href="tel:5550100">555-0100</a>`);
     expect(html).toContain("We aim to reply within 3 working days.");
-    expect(html).toContain("This statement was last updated on October 10, 2026.");
+    expect(html).toContain("This statement was last reviewed on October 10, 2026.");
   });
 
   it("never claims the website is compliant", async () => {

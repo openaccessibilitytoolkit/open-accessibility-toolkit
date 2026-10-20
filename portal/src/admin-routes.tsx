@@ -27,6 +27,9 @@ import {
   deleteReport,
   deleteSite,
   getSite,
+  listReviews,
+  recordReview,
+  setSetting,
   reportCountsBySite,
   updateSite,
   getReport,
@@ -35,13 +38,15 @@ import {
   listSites,
   reference,
   updateReport,
+  type Site,
 } from "./db.js";
-import { sendLoginEmail, sendTestEmail, type TestEmailResult } from "./email.js";
+import { PORTAL_ORIGIN_SETTING, sendLoginEmail, sendTestEmail, type TestEmailResult } from "./email.js";
 import { SETUP_GUIDE_URL, SetupPage, checkFooterLinks, type Check } from "./setup-page.js";
 import { Message } from "./pages.js";
 import { visitorKey } from "./safeguards.js";
 import { EMPTY_SITE_FORM, formValuesFromSite, siteIdFor, validateSite } from "./site-form.js";
-import { DeleteSitePage, NewSitePage, SitePage, SitesPage } from "./sites.js";
+import { DeleteSitePage, NewSitePage, ReviewPage, SitePage, SitesPage } from "./sites.js";
+import { longDate } from "./statement.js";
 import { STATUSES, formatTime, isStatus } from "./timeline.js";
 import { ASSISTIVE_TECH, isEmail, type AssistiveTech } from "./validate.js";
 
@@ -98,6 +103,8 @@ admin.post("/login/verify", async (c) => {
     );
   }
   await deleteExpired(c.env.DB, Date.now());
+  // Remember the portal's own address, so the monthly review email can link back here.
+  await setSetting(c.env.DB, PORTAL_ORIGIN_SETTING, new URL(c.req.url).origin);
   const session = await createSession(c.env.DB, email, Date.now());
   setCookie(c, SESSION_COOKIE, session, {
     prefix: "host",
@@ -270,7 +277,9 @@ admin.post("/sites", async (c) => {
     const duplicate = [{ field: "website" as const, message: `${new URL(input.website).host} is already set up in this portal.` }];
     return c.html(<NewSitePage email={c.get("admin")} values={values} errors={duplicate} />, 400);
   }
-  await createSite(c.env.DB, id, input, new Date());
+  const now = new Date();
+  await createSite(c.env.DB, id, input, now);
+  await recordReview(c.env.DB, id, "updated", c.get("admin"), now);
   return c.redirect(`/admin/sites/${id}?saved=1`, 303);
 });
 
@@ -285,6 +294,7 @@ admin.get("/sites/:siteId", async (c) => {
       values={formValuesFromSite(site)}
       errors={[]}
       saved={c.req.query("saved") === "1"}
+      timeZone={c.env.TIME_ZONE}
     />,
   );
 });
@@ -295,13 +305,44 @@ admin.post("/sites/:siteId", async (c) => {
   const { values, input, errors } = validateSite(await c.req.parseBody());
   if (!input) {
     return c.html(
-      <SitePage email={c.get("admin")} site={site} origin={new URL(c.req.url).origin} values={values} errors={errors} />,
+      <SitePage
+        email={c.get("admin")}
+        site={site}
+        origin={new URL(c.req.url).origin}
+        values={values}
+        errors={errors}
+        timeZone={c.env.TIME_ZONE}
+      />,
       400,
     );
   }
   // The website's short name stays the same, so its footer links keep working.
-  await updateSite(c.env.DB, site.id, input, new Date());
+  const now = new Date();
+  await updateSite(c.env.DB, site.id, input, now);
+  // Saving the details counts as reviewing the statement.
+  await recordReview(c.env.DB, site.id, "updated", c.get("admin"), now);
   return c.redirect(`/admin/sites/${site.id}?saved=1`, 303);
+});
+
+admin.get("/sites/:siteId/review", async (c) => {
+  const site = await getSite(c.env.DB, c.req.param("siteId"));
+  if (!site) return c.html(siteNotFound, 404);
+  return c.html(
+    <ReviewPage
+      email={c.get("admin")}
+      site={site}
+      reviews={await listReviews(c.env.DB, site.id)}
+      timeZone={c.env.TIME_ZONE}
+      done={c.req.query("done") === "1"}
+    />,
+  );
+});
+
+admin.post("/sites/:siteId/review", async (c) => {
+  const site = await getSite(c.env.DB, c.req.param("siteId"));
+  if (!site) return c.html(siteNotFound, 404);
+  await recordReview(c.env.DB, site.id, "confirmed", c.get("admin"), new Date());
+  return c.redirect(`/admin/sites/${site.id}/review?done=1`, 303);
 });
 
 admin.get("/sites/:siteId/delete", async (c) => {
@@ -327,6 +368,32 @@ function validTimeZone(timeZone: string): boolean {
   } catch {
     return false;
   }
+}
+
+/** A statement counts as overdue for review after this many days. */
+const REVIEW_OVERDUE_DAYS = 35;
+
+/** One "needs attention" check per website whose statement hasn't been reviewed recently. */
+function reviewChecks(sites: Site[], timeZone: string, now = Date.now()): Check[] {
+  const overdue = sites.filter((s) => {
+    const last = Date.parse(s.reviewed_at ?? s.updated_at ?? "");
+    return !Number.isFinite(last) || now - last > REVIEW_OVERDUE_DAYS * 24 * 60 * 60 * 1000;
+  });
+  if (sites.length > 0 && overdue.length === 0) {
+    return [
+      {
+        state: "done",
+        title: "Statements reviewed this month",
+        detail: "You'll get a reminder email at the start of each month to review them again.",
+      },
+    ];
+  }
+  return overdue.map((s) => ({
+    state: "attention",
+    title: `The statement for ${new URL(s.website).host} needs its monthly review`,
+    detail: `It was last reviewed on ${longDate(s.reviewed_at ?? s.updated_at, timeZone)}. It takes about 10 seconds.`,
+    link: { href: `/admin/sites/${s.id}/review`, text: `Review ${new URL(s.website).host}` },
+  }));
 }
 
 async function setupPage(c: { env: Bindings; req: { url: string } }, adminEmail: string, testResult?: TestEmailResult) {
@@ -371,6 +438,7 @@ async function setupPage(c: { env: Bindings; req: { url: string } }, adminEmail:
           detail: "Add your website to get its report form, accessibility statement and footer links.",
           link: { href: "/admin/sites/new", text: "Add a website" },
         },
+    ...reviewChecks(sites, env.TIME_ZONE),
     validTimeZone(env.TIME_ZONE)
       ? { state: "done", title: `Times are shown in ${env.TIME_ZONE}`, detail: "To change this, update TIME_ZONE in Cloudflare." }
       : { state: "attention", title: `"${env.TIME_ZONE}" isn't a time zone we recognize`, detail: "Use a name like America/New_York or Europe/London. Times are shown in UTC until then." },

@@ -76,10 +76,15 @@ export function ownerRecipients(site: Site): string[] {
  * link is clickable; links in visitors' text stay plain text, so they can't be
  * used to trick the owner.
  */
-function htmlBody(title: string, paragraphs: string[], action?: { text: string; href: string }): string {
+function htmlBody(
+  title: string,
+  paragraphs: string[],
+  action?: { text: string; href: string } | { text: string; href: string }[],
+): string {
+  const actions = action === undefined ? [] : Array.isArray(action) ? action : [action];
   const body = paragraphs
     .map((p) => `<p style="margin:0 0 16px">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
-    .concat(action ? [`<p style="margin:0 0 16px"><a href="${escapeHtml(action.href)}">${escapeHtml(action.text)}</a></p>`] : [])
+    .concat(actions.map((a) => `<p style="margin:0 0 16px"><a href="${escapeHtml(a.href)}">${escapeHtml(a.text)}</a></p>`))
     .join("\n");
   return `<!doctype html>
 <html lang="en">
@@ -328,4 +333,78 @@ export async function sendTestEmail(env: EmailEnv, to: string): Promise<TestEmai
     return { ok: false, message: "Resend didn't accept your API key. Create a new one and save it again.", detail: result.error };
   }
   return { ok: false, message: "The test email couldn't be sent.", detail: result.error };
+}
+
+/** The setting that records which month's review reminder has already been sent. */
+export const REVIEW_REMINDER_SETTING = "review_reminder_month";
+/** The portal's own web address, saved when an admin logs in, so scheduled emails can link to it. */
+export const PORTAL_ORIGIN_SETTING = "portal_origin";
+
+/** One monthly email listing every website, each with a link to its one-click review. */
+export function reviewReminderEmail(
+  to: string[],
+  sites: Site[],
+  portalOrigin: string,
+  monthLabel: string,
+  monthKey: string,
+): OutgoingEmail {
+  const title = `Time for your monthly accessibility statement review (${monthLabel})`;
+  const paragraphs = [
+    `Once a month, please check that the accessibility statement for each of your websites is still accurate: contact details, reply time and the problems you know about. It takes about 10 seconds for each website.`,
+    sites.map((s) => `- ${host(s)}: ${portalOrigin}/admin/sites/${s.id}/review`).join("\n"),
+    "Each statement then shows the date it was last reviewed, and every review is saved in your portal.",
+  ];
+  return {
+    to,
+    subject: title,
+    text: [title, "", ...paragraphs.flatMap((p) => [p, ""])].join("\n"),
+    html: htmlBody(
+      title,
+      [paragraphs[0], paragraphs[2]],
+      sites.map((s) => ({ text: `Review ${host(s)}`, href: `${portalOrigin}/admin/sites/${s.id}/review` })),
+    ),
+    idempotencyKey: `review-reminder-${monthKey}`,
+  };
+}
+
+/** Reminders are sent on the first day of the month they can be, up to this day. */
+export const REMINDER_LAST_DAY = 7;
+
+export type ReminderResult = "sent" | "already-sent" | "not-due" | "no-email" | "no-sites" | "no-admins" | "no-portal-address" | "failed";
+
+/**
+ * Sends this month's review reminder once: one email to all admins, listing every
+ * website. Runs from the monthly schedule; safe to run more than once a month.
+ */
+export async function sendMonthlyReviewReminder(
+  env: EmailEnv & { ADMIN_EMAILS?: string },
+  admins: string[],
+  sites: Site[],
+  getSetting: (key: string) => Promise<string | null>,
+  setSetting: (key: string, value: string) => Promise<void>,
+  now: Date,
+): Promise<ReminderResult> {
+  const monthKey = now.toISOString().slice(0, 7);
+  if ((await getSetting(REVIEW_REMINDER_SETTING)) === monthKey) return "already-sent";
+  // Reminders go out in the first week of the month. The schedule runs every day, so if
+  // one day fails (for example email was down), the next day tries again.
+  if (now.getUTCDate() > REMINDER_LAST_DAY) return "not-due";
+  if (!env.RESEND_API_KEY) return "no-email";
+  if (sites.length === 0) return "no-sites";
+  if (admins.length === 0) return "no-admins";
+  const origin = await getSetting(PORTAL_ORIGIN_SETTING);
+  if (!origin) return "no-portal-address";
+  const monthLabel = now.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+  await countEmail(env.DB, today(now));
+  const result = await sendEmail(
+    env.RESEND_API_KEY,
+    fromAddress(env.EMAIL_FROM, "Accessibility portal"),
+    reviewReminderEmail(admins, sites, origin, monthLabel, monthKey),
+  );
+  if (!result.ok) {
+    console.error(`Monthly review reminder could not be sent: ${result.error}`);
+    return "failed";
+  }
+  await setSetting(REVIEW_REMINDER_SETTING, monthKey);
+  return "sent";
 }

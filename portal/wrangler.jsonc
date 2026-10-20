@@ -5,6 +5,9 @@
   "main": "src/index.tsx",
   "compatibility_date": "2026-10-01",
   "observability": { "enabled": true },
+  // Every day at 13:00 UTC (about 9am US Eastern). The portal sends the monthly
+  // statement review reminder on the first of these days in each month.
+  "triggers": { "crons": ["0 13 * * *"] },
   "d1_databases": [
     {
       "binding": "DB",

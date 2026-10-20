@@ -108,7 +108,7 @@ export function StatementPage(props: { site: Site; timeZone: string }) {
         <p>We aim to reply within {plural(site.reply_days, "working day")}.</p>
 
         <h2>Date of this statement</h2>
-        <p>This statement was last updated on {longDate(site.updated_at, props.timeZone)}.</p>
+        <p>This statement was last reviewed on {longDate(site.reviewed_at ?? site.updated_at, props.timeZone)}.</p>
       </article>
     </Layout>
   );

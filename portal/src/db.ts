@@ -14,9 +14,12 @@ export interface Site {
   /** Problems the owner knows about, one per line. */
   known_problems: string;
   updated_at: string | null;
+  /** When a person last reviewed this website's statement (or saved its details). */
+  reviewed_at: string | null;
 }
 
-const SITE_COLUMNS = "id, organization, website, contact_email, reply_days, phone, notify_emails, known_problems, updated_at";
+const SITE_COLUMNS =
+  "id, organization, website, contact_email, reply_days, phone, notify_emails, known_problems, updated_at, reviewed_at";
 
 export function getSite(db: D1Database, id: string): Promise<Site | null> {
   return db
@@ -212,8 +215,8 @@ export async function createSite(db: D1Database, id: string, input: SiteInput, n
   const at = now.toISOString();
   await db
     .prepare(
-      `INSERT INTO sites (id, organization, website, contact_email, reply_days, phone, notify_emails, known_problems, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO sites (id, organization, website, contact_email, reply_days, phone, notify_emails, known_problems, created_at, updated_at, reviewed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       id,
@@ -226,6 +229,7 @@ export async function createSite(db: D1Database, id: string, input: SiteInput, n
       input.knownProblems.join("\n"),
       at,
       at,
+      at,
     )
     .run();
 }
@@ -234,7 +238,7 @@ export async function updateSite(db: D1Database, id: string, input: SiteInput, n
   await db
     .prepare(
       `UPDATE sites SET organization = ?, website = ?, contact_email = ?, reply_days = ?, phone = ?,
-         notify_emails = ?, known_problems = ?, updated_at = ? WHERE id = ?`,
+         notify_emails = ?, known_problems = ?, updated_at = ?, reviewed_at = ? WHERE id = ?`,
     )
     .bind(
       input.organization,
@@ -244,6 +248,7 @@ export async function updateSite(db: D1Database, id: string, input: SiteInput, n
       input.phone || null,
       JSON.stringify(input.notifyEmails),
       input.knownProblems.join("\n"),
+      now.toISOString(),
       now.toISOString(),
       id,
     )
@@ -262,4 +267,51 @@ export async function deleteSite(db: D1Database, id: string): Promise<void> {
     db.prepare("DELETE FROM reports WHERE site_id = ?").bind(id),
     db.prepare("DELETE FROM sites WHERE id = ?").bind(id),
   ]);
+}
+
+// ---- Monthly statement reviews ----
+
+export type ReviewOutcome = "confirmed" | "updated";
+
+/** Records a review: "confirmed" (still accurate) or "updated" (details were saved). */
+export async function recordReview(
+  db: D1Database,
+  siteId: string,
+  outcome: ReviewOutcome,
+  actor: string,
+  now: Date,
+): Promise<void> {
+  const at = now.toISOString();
+  await db.batch([
+    db.prepare("UPDATE sites SET reviewed_at = ? WHERE id = ?").bind(at, siteId),
+    db
+      .prepare("INSERT INTO site_reviews (site_id, at, actor, outcome) VALUES (?, ?, ?, ?)")
+      .bind(siteId, at, actor, outcome),
+  ]);
+}
+
+export interface Review {
+  at: string;
+  actor: string;
+  outcome: ReviewOutcome;
+}
+
+export async function listReviews(db: D1Database, siteId: string, limit = 12): Promise<Review[]> {
+  const rows = await db
+    .prepare("SELECT at, actor, outcome FROM site_reviews WHERE site_id = ? ORDER BY at DESC, id DESC LIMIT ?")
+    .bind(siteId, limit)
+    .all<Review>();
+  return rows.results;
+}
+
+export async function getSetting(db: D1Database, key: string): Promise<string | null> {
+  const row = await db.prepare("SELECT value FROM settings WHERE key = ?").bind(key).first<{ value: string }>();
+  return row?.value ?? null;
+}
+
+export async function setSetting(db: D1Database, key: string, value: string): Promise<void> {
+  await db
+    .prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value")
+    .bind(key, value)
+    .run();
 }

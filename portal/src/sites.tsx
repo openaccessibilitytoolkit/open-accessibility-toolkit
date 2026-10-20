@@ -1,9 +1,10 @@
 // The owner's Websites pages: the list, add/edit form with footer links, and delete.
 
 import { AdminLayout } from "./admin.js";
-import type { Site } from "./db.js";
+import type { Review, Site } from "./db.js";
 import { SITE_LIMITS, type SiteField, type SiteFieldError, type SiteFormValues } from "./site-form.js";
-import { footerHtml, reportPath, statementPath } from "./statement.js";
+import { footerHtml, knownProblemList, longDate, reportPath, statementPath } from "./statement.js";
+import { formatTime } from "./timeline.js";
 
 function host(website: string): string {
   try {
@@ -214,6 +215,7 @@ export function SitePage(props: {
   values: SiteFormValues;
   errors: SiteFieldError[];
   saved?: boolean;
+  timeZone: string;
 }) {
   const { site, origin } = props;
   const statementUrl = `${origin}${statementPath(site)}`;
@@ -242,6 +244,10 @@ export function SitePage(props: {
               Report form: <a href={reportPath(site)}>{reportUrl}</a>
             </li>
           </ul>
+          <p>
+            Statement last reviewed on {longDate(site.reviewed_at ?? site.updated_at, props.timeZone)}.{" "}
+            <a href={`/admin/sites/${site.id}/review`}>Review it now</a>
+          </p>
         </div>
 
         <div class="card">
@@ -281,7 +287,7 @@ export function SitePage(props: {
           </details>
         </div>
 
-        <h2>Settings</h2>
+        <h2 id="settings">Settings</h2>
         <SiteForm action={`/admin/sites/${site.id}`} values={props.values} errors={props.errors} submit="Save changes" />
 
         <div class="card">
@@ -319,6 +325,79 @@ export function DeleteSitePage(props: { email: string; site: Site; reportCount: 
         <p>
           <a href={`/admin/sites/${props.site.id}`}>No, go back</a>
         </p>
+      </div>
+    </AdminLayout>
+  );
+}
+
+export function ReviewPage(props: { email: string; site: Site; reviews: Review[]; timeZone: string; done?: boolean }) {
+  const { site } = props;
+  const name = host(site.website);
+  const problems = knownProblemList(site);
+  return (
+    <AdminLayout title={`Review the statement for ${name}`} email={props.email} section="sites">
+      <div class="narrow">
+        {props.done && (
+          <div class="saved" tabindex={-1} autofocus>
+            <p>
+              Thank you. Your statement now shows it was reviewed on{" "}
+              {longDate(site.reviewed_at, props.timeZone)}.
+            </p>
+          </div>
+        )}
+        <p>
+          <a href={`/admin/sites/${site.id}`}>Back to {name}</a>
+        </p>
+        <h1>Review the statement for {name}</h1>
+        <p class="lead">
+          Check that these details are still accurate. They're shown on your{" "}
+          <a href={statementPath(site)}>public accessibility statement</a>.
+        </p>
+        <div class="card">
+          <dl class="details">
+            <dt>Organization</dt>
+            <dd>{site.organization}</dd>
+            <dt>Email for accessibility problems</dt>
+            <dd>{site.contact_email}</dd>
+            <dt>Phone</dt>
+            <dd>{site.phone || "None"}</dd>
+            <dt>Reply time</dt>
+            <dd>{plural(site.reply_days, "working day")}</dd>
+            <dt>Problems you know about</dt>
+            <dd>
+              {problems.length ? (
+                <ul>
+                  {problems.map((p) => (
+                    <li>{p}</li>
+                  ))}
+                </ul>
+              ) : (
+                "None listed"
+              )}
+            </dd>
+            <dt>Last reviewed</dt>
+            <dd>{longDate(site.reviewed_at ?? site.updated_at, props.timeZone)}</dd>
+          </dl>
+          <form method="post" action={`/admin/sites/${site.id}/review`}>
+            <button type="submit">Yes, it's still accurate</button>
+          </form>
+          <p>
+            <a href={`/admin/sites/${site.id}#settings`}>Something has changed: update the details</a>
+          </p>
+        </div>
+        {props.reviews.length > 0 && (
+          <div class="card">
+            <h2>Past reviews</h2>
+            <ul>
+              {props.reviews.map((r) => (
+                <li>
+                  <time datetime={r.at}>{formatTime(r.at, props.timeZone)}</time>:{" "}
+                  {r.outcome === "confirmed" ? "Confirmed still accurate" : "Details updated"} by {r.actor}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

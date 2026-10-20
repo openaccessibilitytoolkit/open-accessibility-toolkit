@@ -75,6 +75,13 @@ for a pretend bakery. Reports sent there reach the project team; please only sen
 - **Download a spreadsheet** (CSV) of all reports. Cells that start like a formula are
   made safe, so a visitor's text can't run as a formula in Excel.
 - Times are shown in the `TIME_ZONE` you choose (default: US Eastern).
+- **Monthly statement review:** in the first week of each month, one email to all admins
+  (through Resend) lists every website with a **Review** link. One click on **Yes, it's
+  still accurate** records the review with the date and who did it, and the public
+  statement shows "last reviewed on" that date. Saving a website's details also counts.
+  The date is never changed automatically, so it always reflects a real review. A daily
+  Cloudflare schedule (`triggers.crons` in `wrangler.jsonc`) sends it once a month and
+  retries the next day if email fails.
 - **Check my setup** at `/admin/setup`: plain "Done" / "Needs attention" checks for login,
   email, the sending address, websites and time zone, a **Send me a test email** button
   that explains Resend errors in plain words, and a check that your footer links are

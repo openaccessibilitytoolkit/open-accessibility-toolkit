@@ -4,8 +4,9 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import admin from "./admin-routes.js";
 import { DEFAULTS, type Bindings } from "./bindings.js";
-import { countSubmission, createReport, getSite, reference } from "./db.js";
-import { emailNewReport } from "./email.js";
+import { adminEmails } from "./auth.js";
+import { countSubmission, createReport, getSetting, getSite, listSites, reference, setSetting } from "./db.js";
+import { emailNewReport, sendMonthlyReviewReminder, type ReminderResult } from "./email.js";
 import { Message, ReportForm, ThankYou } from "./pages.js";
 import { RATE_LIMIT, looksAutomated, visitorKey } from "./safeguards.js";
 import { hashSalt } from "./settings.js";
@@ -124,4 +125,31 @@ app.route("/admin", admin);
 
 app.notFound((c) => c.html(<Message title="Page not found">We couldn't find that page.</Message>, 404));
 
-export default app;
+/** Runs every day from the schedule in wrangler.jsonc: sends the monthly review reminder once a month. */
+export async function runMonthlyReview(env: Bindings, now: Date): Promise<ReminderResult> {
+  const filled: Bindings = {
+    ...env,
+    HASH_SALT: await hashSalt(env.DB, env.HASH_SALT),
+    EMAIL_FROM: env.EMAIL_FROM || DEFAULTS.EMAIL_FROM,
+    TIME_ZONE: env.TIME_ZONE || DEFAULTS.TIME_ZONE,
+  };
+  const result = await sendMonthlyReviewReminder(
+    filled,
+    adminEmails(env.ADMIN_EMAILS),
+    await listSites(env.DB),
+    (key) => getSetting(env.DB, key),
+    (key, value) => setSetting(env.DB, key, value),
+    now,
+  );
+  console.log(`Monthly statement review reminder: ${result}`);
+  return result;
+}
+
+export { app };
+
+export default {
+  fetch: app.fetch,
+  async scheduled(_controller, env, ctx) {
+    ctx.waitUntil(runMonthlyReview(env, new Date()));
+  },
+} satisfies ExportedHandler<Bindings>;

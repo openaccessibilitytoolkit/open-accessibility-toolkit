@@ -23,6 +23,7 @@ const site: Site = {
   notify_emails: '["web@joesbakery.com", "HELLO@joesbakery.com"]',
   known_problems: "",
   updated_at: null,
+  reviewed_at: null,
 };
 
 const input: ReportInput = {

@@ -208,8 +208,15 @@ needs attention:
 - whether you're still on Resend's test address (step 7)
 - whether your website is added
 - whether the **footer links are really on your website's home page**
+- whether each statement has had its **monthly review**
 
 Fix anything marked **Needs attention**, and you're done. 🎉
+
+**Every month after that:** in the first days of each month, your portal emails you one
+reminder listing all your websites. Click **Review** next to each one, check the details,
+and press **Yes, it's still accurate**. It takes about 10 seconds a website. Your public
+statement then shows the date it was last reviewed, and each review is saved in your
+portal with the date and who did it. Saving a website's details also counts as a review.
 
 ## 9. Keep your portal safe and up to date
 
