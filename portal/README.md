@@ -145,6 +145,14 @@ For developers. Everyone else, use the
 6. To update later: get the latest code (`git pull`), then `npm run deploy` again.
    Your data and secrets stay as they are.
 
+### When an update needs a new setting
+
+Owners' `wrangler.jsonc` is never changed by **Update my portal**, because it holds their
+own portal and database names. If a new feature needs a setting there, add it to
+`UPGRADES` in `scripts/upgrade-config.mjs`. `npm run deploy` runs that script first, so
+each owner's next publish adds the missing setting without touching anything else.
+`npm run test:scripts` checks it.
+
 ## Tests
 
 ```bash

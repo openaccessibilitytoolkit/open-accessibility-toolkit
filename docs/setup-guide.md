@@ -238,6 +238,11 @@ Accessibility Toolkit project don't reach it by themselves. Updating takes one c
 The update never touches your reports, your settings in Cloudflare (like your Resend
 key), or the file that holds your portal's name and database (`wrangler.jsonc`).
 
+If an update needs something new in that file (for example, the daily schedule that
+sends the monthly statement review reminder), your portal adds it by itself when
+Cloudflare publishes the update. Nothing you've set is ever changed. After updating,
+open your portal's **Check my setup** page once to make sure everything is green.
+
 **To hear about updates:** go to the
 [project's GitHub page](https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit),
 click **Watch**, then **Custom**, tick **Releases**, and click **Apply**. GitHub emails

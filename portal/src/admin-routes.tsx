@@ -27,6 +27,7 @@ import {
   deleteReport,
   deleteSite,
   getSite,
+  getSetting,
   listReviews,
   recordReview,
   setSetting,
@@ -129,6 +130,12 @@ admin.use(async (c, next) => {
   const email = await getSessionEmail(c.env.DB, getCookie(c, SESSION_COOKIE, "host"), Date.now(), c.env.ADMIN_EMAILS);
   if (!email) return c.redirect("/admin/login", 303);
   c.set("admin", email);
+  // Remember the portal's own address (for the monthly review email's links). Admins who
+  // stay logged in never pass through the login page, so check on every visit.
+  const origin = new URL(c.req.url).origin;
+  if ((await getSetting(c.env.DB, PORTAL_ORIGIN_SETTING)) !== origin) {
+    await setSetting(c.env.DB, PORTAL_ORIGIN_SETTING, origin);
+  }
   await next();
 });
 
