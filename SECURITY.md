@@ -14,6 +14,37 @@ Only the project's maintainers can see your report. We'll reply as soon as we ca
 usually within a week, and keep you updated until it's fixed. If you'd like to be
 credited when the fix is announced, say so in your report.
 
+## What a good report includes
+
+- **Steps we can follow to see the problem ourselves**: a working example (proof of
+  concept), not just a description of what might be possible.
+- **Which part is affected** (the portal, the command-line scanner, the statement
+  generator, or the GitHub Action) and which version or commit you tested.
+- **What someone could actually do with it**, such as reading other people's reports or
+  logging in without permission.
+
+## Automated tools and AI
+
+You're welcome to use scanners and AI tools to help with your research. If you did,
+please say so in your report and tell us which ones.
+
+We can't accept reports made entirely by automated tools or AI without a person checking
+them. A report needs to show a real problem in this project's code that you've confirmed
+yourself. Raw scanner output (for example, a list of missing headers with no
+demonstrated effect) isn't enough on its own.
+
+## Rules for testing
+
+- **Test on your own copy**: run the portal on your computer, or deploy your own copy to
+  Cloudflare. Please don't test against the live demo or anyone else's portal.
+- **No flooding or slowing things down**: don't send large numbers of reports, login
+  emails or requests, and don't try to overload any service.
+- **Don't look at, change or keep other people's data.** If you come across someone
+  else's information by accident, stop, don't share it, and tell us in your report.
+- **Give us time to fix it before going public.** Please keep the details private until
+  a fix is released, or for 90 days after your report, whichever comes first. If we need
+  longer, we'll explain why and agree a date with you.
+
 ## What this covers
 
 - The **portal** (`portal/`): the self-hosted report form, accessibility statement and
