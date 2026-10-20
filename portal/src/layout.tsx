@@ -84,6 +84,8 @@ const styles = `
   textarea[readonly] { background: var(--panel); font-family: ui-monospace, Consolas, monospace; font-size: 0.9rem; }
   select { width: auto; max-width: 100%; min-height: 2.75rem; padding: 0.4rem 0.75rem; }
   fieldset { border: 0; padding: 0; margin: 1.5rem 0; }
+  fieldset.nested { margin: 0.75rem 0 0 2.25rem; }
+  fieldset.nested legend { font-weight: normal; }
   .choice { display: flex; align-items: center; gap: 0.75rem; min-height: 2.75rem; }
   .choice input { width: 1.5rem; height: 1.5rem; margin: 0; accent-color: var(--brand); flex: none; }
   .choice label { font-weight: normal; }

@@ -77,18 +77,18 @@ export async function createSession(db: D1Database, email: string, now: number):
 }
 
 /** The logged-in admin's email, or null. Admins removed from the list are logged out. */
-export async function getSessionEmail(
-  db: D1Database,
-  token: string | undefined,
-  now: number,
-  adminSetting: string | undefined,
-): Promise<string | null> {
+/**
+ * The email of a valid session, or null. Whether that person may still log in (and
+ * what they can see) is checked separately on every request, so removing someone
+ * logs them out straight away.
+ */
+export async function getSessionEmail(db: D1Database, token: string | undefined, now: number): Promise<string | null> {
   if (!token) return null;
   const row = await db
     .prepare("SELECT email FROM sessions WHERE token_hash = ? AND expires_at > ?")
     .bind(await sha256(token), now)
     .first<{ email: string }>();
-  return row && isAdmin(adminSetting, row.email) ? row.email : null;
+  return row?.email ?? null;
 }
 
 /**

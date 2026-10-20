@@ -18,7 +18,14 @@ function plural(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
-export function SitesPage(props: { email: string; sites: Site[]; counts: Record<string, number>; deleted?: string }) {
+export function SitesPage(props: {
+  email: string;
+  sites: Site[];
+  counts: Record<string, number>;
+  deleted?: string;
+  /** False for people limited to some websites: they can't add websites. */
+  canAdd?: boolean;
+}) {
   return (
     <AdminLayout title="Websites" email={props.email} section="sites" sectionHome>
       {props.deleted && (
@@ -28,11 +35,13 @@ export function SitesPage(props: { email: string; sites: Site[]; counts: Record<
       )}
       <div class="page-title">
         <h1>Your websites</h1>
-        <p>
-          <a href="/admin/sites/new" class="button-link">
-            Add a website
-          </a>
-        </p>
+        {props.canAdd !== false && (
+          <p>
+            <a href="/admin/sites/new" class="button-link">
+              Add a website
+            </a>
+          </p>
+        )}
       </div>
       {props.sites.length === 0 ? (
         <p class="card">You haven't added a website yet.</p>

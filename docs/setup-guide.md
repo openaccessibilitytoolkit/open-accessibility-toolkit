@@ -151,6 +151,17 @@ portal. The address is shown there.
 5. Click **Add website**. The next page shows your **accessibility statement** link, your
    **report form** link, and the **footer code** for step 6.
 
+**Want someone else to help?** Click **People**, type their email, and choose what they
+can see:
+- **All websites:** they see every report and can add websites (but not people).
+- **Only the websites you tick:** for example, a web designer who only looks after one
+  of your websites. They can't see anything belonging to your other websites.
+
+They get an invitation email and log in the same way you do, with no password. To remove
+someone, click **Remove** next to their name; they're logged out straight away. Only
+**portal owners** (the emails in **ADMIN_EMAILS**) can add or remove people, and owners
+can't be removed from the People page, so nobody gets locked out by accident.
+
 ## 6. Add the footer links to your website
 
 These are two plain links: **"Accessibility statement"** and **"Report an accessibility
@@ -296,7 +307,9 @@ everything from
 then click **Commit changes**.
 
 **I want more people to be able to log in.**
-In Cloudflare, edit **ADMIN_EMAILS** and add their addresses, separated by commas.
+In your portal, click **People** and add them (see step 5). To add another **owner**, who
+can also manage people, edit **ADMIN_EMAILS** in Cloudflare instead and add their
+address, separated by a comma.
 
 **For developers.** You can set the portal up from the command line instead; see
 [portal/README.md](../portal/README.md). On Windows, if PowerShell blocks `npx`, type

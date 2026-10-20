@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **New: People.** Portal owners can add people by email (with an invitation), choose
+  whether each person sees all websites or only chosen ones, change it later, or remove
+  them. People limited to some websites can't reach anything belonging to other websites.
+
 ## 1.1.0 (2026-10-20)
 
 Adds the free, self-hosted accessibility portal and the accessibility statement generator.

@@ -1,20 +1,27 @@
 // The owner's pages: login, inbox, a report with its timeline, and delete.
 
-import type { Child } from "hono/jsx";
+import { useContext, type Child } from "hono/jsx";
+import { ViewerContext, canManagePeople, canManageWebsites } from "./access.js";
 import { reference, type ReportRow, type Site } from "./db.js";
 import { Layout, SiteHeader } from "./layout.js";
 import { STATUSES, describeEvent, formatTime, type TimelineEvent } from "./timeline.js";
 import { ASSISTIVE_TECH, type AssistiveTech } from "./validate.js";
 
-export type AdminSection = "reports" | "sites" | "setup";
+export type AdminSection = "reports" | "sites" | "setup" | "people";
 
 const SECTIONS: [AdminSection, string, string][] = [
   ["reports", "/admin", "Reports"],
   ["sites", "/admin/sites", "Websites"],
   ["setup", "/admin/setup", "Check my setup"],
+  ["people", "/admin/people", "People"],
 ];
 
 function AdminHeader(props: { email: string; section?: AdminSection; sectionHome?: boolean }) {
+  // Only show what this person can use.
+  const viewer = useContext(ViewerContext);
+  const sections = SECTIONS.filter(([key]) =>
+    key === "people" ? viewer !== null && canManagePeople(viewer) : key === "setup" ? viewer !== null && canManageWebsites(viewer) : true,
+  );
   return (
     <SiteHeader name="Accessibility portal" href="/admin">
       <div class="account">
@@ -27,7 +34,7 @@ function AdminHeader(props: { email: string; section?: AdminSection; sectionHome
       </div>
       <nav aria-label="Portal">
         <ul>
-          {SECTIONS.map(([key, href, text]) => (
+          {sections.map(([key, href, text]) => (
             <li>
               <a href={href} aria-current={props.section === key ? (props.sectionHome ? "page" : "true") : undefined}>
                 {text}

@@ -408,3 +408,31 @@ export async function sendMonthlyReviewReminder(
   await setSetting(REVIEW_REMINDER_SETTING, monthKey);
   return "sent";
 }
+
+/** Invites someone who was just added on the People page. */
+export function invitationEmail(to: string, invitedBy: string, portalOrigin: string, canSee: string): OutgoingEmail {
+  const title = "You've been added to an accessibility portal";
+  const loginUrl = `${portalOrigin}/admin/login`;
+  const paragraphs = [
+    `${invitedBy} added you to their accessibility portal, where visitors' reports about accessibility problems are kept and answered.`,
+    `You can see: ${canSee}.`,
+    `To log in, go to ${loginUrl} and type this email address. You'll get a one-time login link by email. There's no password.`,
+    "If you weren't expecting this, you can ignore this email.",
+  ];
+  return {
+    to: [to],
+    subject: title,
+    text: [title, "", ...paragraphs.flatMap((p) => [p, ""])].join("\n"),
+    html: htmlBody(title, paragraphs, { text: "Log in to the accessibility portal", href: loginUrl }),
+    idempotencyKey: `invite-${crypto.randomUUID()}`,
+  };
+}
+
+/** Sends an invitation, counting it toward today's emails. Returns false if it couldn't be sent. */
+export async function sendInvitation(env: EmailEnv, email: OutgoingEmail): Promise<boolean> {
+  if (!env.RESEND_API_KEY) return false;
+  await countEmail(env.DB, today(new Date()));
+  const result = await sendEmail(env.RESEND_API_KEY, fromAddress(env.EMAIL_FROM, "Accessibility portal"), email);
+  if (!result.ok) console.error(`Invitation email could not be sent: ${result.error}`);
+  return result.ok;
+}

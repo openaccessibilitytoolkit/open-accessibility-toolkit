@@ -93,11 +93,21 @@ export interface ReportRow {
 export interface ReportFilter {
   siteId?: string;
   status?: string;
+  /** Only these websites (for people limited to some websites). Undefined means all. */
+  allowedSiteIds?: string[];
 }
 
 function whereClause(filter: ReportFilter): { sql: string; params: string[] } {
   const parts: string[] = [];
   const params: string[] = [];
+  if (filter.allowedSiteIds) {
+    if (filter.allowedSiteIds.length === 0) {
+      parts.push("1 = 0");
+    } else {
+      parts.push(`r.site_id IN (${filter.allowedSiteIds.map(() => "?").join(", ")})`);
+      params.push(...filter.allowedSiteIds);
+    }
+  }
   if (filter.siteId) {
     parts.push("r.site_id = ?");
     params.push(filter.siteId);
@@ -130,8 +140,12 @@ export async function listReports(
 }
 
 /** How many reports have each status, for the chosen website (or all). */
-export async function countByStatus(db: D1Database, siteId?: string): Promise<Record<string, number>> {
-  const where = whereClause({ siteId });
+export async function countByStatus(
+  db: D1Database,
+  siteId?: string,
+  allowedSiteIds?: string[],
+): Promise<Record<string, number>> {
+  const where = whereClause({ siteId, allowedSiteIds });
   const rows = await db
     .prepare(`SELECT r.status, count(*) AS n FROM reports r ${where.sql} GROUP BY r.status`)
     .bind(...where.params)
@@ -265,6 +279,8 @@ export async function deleteSite(db: D1Database, id: string): Promise<void> {
   await db.batch([
     db.prepare("DELETE FROM report_events WHERE report_id IN (SELECT id FROM reports WHERE site_id = ?)").bind(id),
     db.prepare("DELETE FROM reports WHERE site_id = ?").bind(id),
+    db.prepare("DELETE FROM person_sites WHERE site_id = ?").bind(id),
+    db.prepare("DELETE FROM site_reviews WHERE site_id = ?").bind(id),
     db.prepare("DELETE FROM sites WHERE id = ?").bind(id),
   ]);
 }
@@ -314,4 +330,107 @@ export async function setSetting(db: D1Database, key: string, value: string): Pr
     .prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value")
     .bind(key, value)
     .run();
+}
+
+// ---- People who can log in ----
+
+export interface Person {
+  email: string;
+  all_sites: number;
+  added_by: string;
+  added_at: string;
+  /** Comma-separated website ids, for people limited to some websites. */
+  site_ids: string | null;
+}
+
+export async function listPeople(db: D1Database): Promise<Person[]> {
+  const rows = await db
+    .prepare(
+      `SELECT p.email, p.all_sites, p.added_by, p.added_at, group_concat(ps.site_id) AS site_ids
+       FROM people p LEFT JOIN person_sites ps ON ps.email = p.email
+       GROUP BY p.email ORDER BY p.added_at`,
+    )
+    .all<Person>();
+  return rows.results;
+}
+
+export async function getPerson(db: D1Database, email: string): Promise<Person | null> {
+  return db
+    .prepare(
+      `SELECT p.email, p.all_sites, p.added_by, p.added_at, group_concat(ps.site_id) AS site_ids
+       FROM people p LEFT JOIN person_sites ps ON ps.email = p.email
+       WHERE p.email = ? GROUP BY p.email`,
+    )
+    .bind(email)
+    .first<Person>();
+}
+
+function accessStatements(db: D1Database, email: string, allSites: boolean, siteIds: string[]): D1PreparedStatement[] {
+  return [
+    db.prepare("DELETE FROM person_sites WHERE email = ?").bind(email),
+    ...(allSites ? [] : siteIds.map((id) => db.prepare("INSERT INTO person_sites (email, site_id) VALUES (?, ?)").bind(email, id))),
+  ];
+}
+
+function peopleEvent(db: D1Database, at: string, actor: string, kind: string, email: string, detail: string | null) {
+  return db
+    .prepare("INSERT INTO people_events (at, actor, kind, email, detail) VALUES (?, ?, ?, ?, ?)")
+    .bind(at, actor, kind, email, detail);
+}
+
+export async function addPerson(
+  db: D1Database,
+  email: string,
+  access: { allSites: boolean; siteIds: string[]; detail: string },
+  actor: string,
+  now: Date,
+): Promise<void> {
+  const at = now.toISOString();
+  await db.batch([
+    db.prepare("INSERT INTO people (email, all_sites, added_by, added_at) VALUES (?, ?, ?, ?)").bind(email, access.allSites ? 1 : 0, actor, at),
+    ...accessStatements(db, email, access.allSites, access.siteIds),
+    peopleEvent(db, at, actor, "added", email, access.detail),
+  ]);
+}
+
+export async function changePersonAccess(
+  db: D1Database,
+  email: string,
+  access: { allSites: boolean; siteIds: string[]; detail: string },
+  actor: string,
+  now: Date,
+): Promise<void> {
+  const at = now.toISOString();
+  await db.batch([
+    db.prepare("UPDATE people SET all_sites = ? WHERE email = ?").bind(access.allSites ? 1 : 0, email),
+    ...accessStatements(db, email, access.allSites, access.siteIds),
+    peopleEvent(db, at, actor, "access_changed", email, access.detail),
+  ]);
+}
+
+/** Removes a person and logs them out everywhere straight away. */
+export async function removePerson(db: D1Database, email: string, actor: string, now: Date): Promise<void> {
+  await db.batch([
+    db.prepare("DELETE FROM person_sites WHERE email = ?").bind(email),
+    db.prepare("DELETE FROM people WHERE email = ?").bind(email),
+    db.prepare("DELETE FROM sessions WHERE email = ?").bind(email),
+    db.prepare("DELETE FROM login_tokens WHERE email = ?").bind(email),
+    peopleEvent(db, now.toISOString(), actor, "removed", email, null),
+  ]);
+}
+
+export interface PeopleEvent {
+  at: string;
+  actor: string;
+  kind: "added" | "removed" | "access_changed";
+  email: string;
+  detail: string | null;
+}
+
+export async function listPeopleEvents(db: D1Database, limit = 20): Promise<PeopleEvent[]> {
+  const rows = await db
+    .prepare("SELECT at, actor, kind, email, detail FROM people_events ORDER BY at DESC, id DESC LIMIT ?")
+    .bind(limit)
+    .all<PeopleEvent>();
+  return rows.results;
 }

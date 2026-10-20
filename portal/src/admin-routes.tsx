@@ -1,7 +1,18 @@
 // The owner's part of the portal, under /admin. Everything except logging in
 // needs a valid session.
 
-import { Hono } from "hono";
+import { Hono, type Context, type MiddlewareHandler } from "hono";
+import type { JSX } from "hono/jsx/jsx-runtime";
+import {
+  ViewerContext,
+  canLogIn,
+  canManagePeople,
+  canManageWebsites,
+  canSeeSite,
+  getViewer,
+  visibleSites,
+  type Viewer,
+} from "./access.js";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { csrf } from "hono/csrf";
 import { DeletePage, InboxPage, LoginPage, ReportPage, VerifyPage } from "./admin.js";
@@ -16,7 +27,6 @@ import {
   deleteExpired,
   deleteSession,
   getSessionEmail,
-  isAdmin,
 } from "./auth.js";
 import type { Bindings } from "./bindings.js";
 import { toCsv } from "./csv.js";
@@ -40,13 +50,36 @@ import {
   reference,
   updateReport,
   type Site,
+  addPerson,
+  changePersonAccess,
+  getPerson,
+  listPeople,
+  listPeopleEvents,
+  removePerson,
 } from "./db.js";
-import { PORTAL_ORIGIN_SETTING, sendLoginEmail, sendTestEmail, type TestEmailResult } from "./email.js";
+import {
+  PORTAL_ORIGIN_SETTING,
+  invitationEmail,
+  sendInvitation,
+  sendLoginEmail,
+  sendTestEmail,
+  type TestEmailResult,
+} from "./email.js";
 import { SETUP_GUIDE_URL, SetupPage, checkFooterLinks, type Check } from "./setup-page.js";
 import { Message } from "./pages.js";
 import { visitorKey } from "./safeguards.js";
 import { EMPTY_SITE_FORM, formValuesFromSite, siteIdFor, validateSite } from "./site-form.js";
 import { DeleteSitePage, NewSitePage, ReviewPage, SitePage, SitesPage } from "./sites.js";
+import {
+  EditPersonPage,
+  PeoplePage,
+  RemovePersonPage,
+  describeAccess,
+  parsePersonForm,
+  personAccess,
+  type AccessChoice,
+  type PersonFormError,
+} from "./people.js";
 import { longDate } from "./statement.js";
 import { STATUSES, formatTime, isStatus } from "./timeline.js";
 import { ASSISTIVE_TECH, isEmail, type AssistiveTech } from "./validate.js";
@@ -56,7 +89,13 @@ const PAGE_SIZE = 50;
 const LOGIN_REQUESTS_PER_HOUR = 10;
 const HOUR = 60 * 60 * 1000;
 
-const admin = new Hono<{ Bindings: Bindings; Variables: { admin: string } }>();
+type AdminEnv = { Bindings: Bindings; Variables: { admin: string; viewer: Viewer } };
+const admin = new Hono<AdminEnv>();
+
+/** Renders an owner page, letting the menu know who's looking (so it only shows what they can use). */
+function page(c: Context<AdminEnv>, content: JSX.Element, status: 200 | 400 | 403 | 404 = 200) {
+  return c.html(<ViewerContext.Provider value={c.get("viewer")}>{content}</ViewerContext.Provider>, status);
+}
 
 // Other websites can't submit forms here on your behalf (checks the Origin header).
 admin.use(csrf());
@@ -80,7 +119,7 @@ admin.post("/login", async (c) => {
   const ip = c.req.header("CF-Connecting-IP") ?? "unknown";
   const requests = await countSubmission(c.env.DB, await visitorKey(ip, "login", c.env.HASH_SALT!), now, HOUR);
   // The answer is the same whether or not the address can log in, so nobody can find out who the admins are.
-  if (requests <= LOGIN_REQUESTS_PER_HOUR && isAdmin(c.env.ADMIN_EMAILS, email)) {
+  if (requests <= LOGIN_REQUESTS_PER_HOUR && (await canLogIn(c.env.DB, c.env.ADMIN_EMAILS, email))) {
     const token = await createLoginToken(c.env.DB, email, now);
     if (token) {
       const link = `${new URL(c.req.url).origin}/admin/login/verify?token=${encodeURIComponent(token)}`;
@@ -95,7 +134,7 @@ admin.get("/login/verify", (c) => c.html(<VerifyPage token={c.req.query("token")
 admin.post("/login/verify", async (c) => {
   const form = await c.req.parseBody();
   const email = await consumeLoginToken(c.env.DB, String(form.token ?? ""), Date.now());
-  if (!email || !isAdmin(c.env.ADMIN_EMAILS, email)) {
+  if (!email || !(await canLogIn(c.env.DB, c.env.ADMIN_EMAILS, email))) {
     return c.html(
       <Message title="This login link doesn't work" link={{ href: "/admin/login", text: "Get a new login link" }}>
         Login links work once and expire after 15 minutes. Please ask for a new one.
@@ -127,9 +166,16 @@ admin.post("/logout", async (c) => {
 // ---- Everything below needs a login ----
 
 admin.use(async (c, next) => {
-  const email = await getSessionEmail(c.env.DB, getCookie(c, SESSION_COOKIE, "host"), Date.now(), c.env.ADMIN_EMAILS);
-  if (!email) return c.redirect("/admin/login", 303);
-  c.set("admin", email);
+  const token = getCookie(c, SESSION_COOKIE, "host");
+  const email = await getSessionEmail(c.env.DB, token, Date.now());
+  const viewer = email ? await getViewer(c.env.DB, c.env.ADMIN_EMAILS, email) : null;
+  if (!viewer) {
+    // Removed from the portal (or never allowed): end the session straight away.
+    await deleteSession(c.env.DB, token);
+    return c.redirect("/admin/login", 303);
+  }
+  c.set("admin", viewer.email);
+  c.set("viewer", viewer);
   // Remember the portal's own address (for the monthly review email's links). Admins who
   // stay logged in never pass through the login page, so check on every visit.
   const origin = new URL(c.req.url).origin;
@@ -139,27 +185,58 @@ admin.use(async (c, next) => {
   await next();
 });
 
+// ---- Who can use which pages ----
+
+const notAllowed = (
+  <Message title="You don't have access to this page" link={{ href: "/admin", text: "Back to your reports" }}>
+    Ask a portal owner if you need access.
+  </Message>
+);
+
+/** Adding and deleting websites, and Check my setup: only people who see every website. */
+const websiteManagersOnly: MiddlewareHandler<AdminEnv> = async (c, next) => {
+  if (!canManageWebsites(c.get("viewer"))) return page(c, notAllowed, 403);
+  await next();
+};
+admin.use("/sites/new", websiteManagersOnly);
+admin.post("/sites", websiteManagersOnly);
+admin.use("/sites/:siteId/delete", websiteManagersOnly);
+admin.use("/setup", websiteManagersOnly);
+admin.use("/setup/*", websiteManagersOnly);
+
+/** The People page: only portal owners. */
+const ownersOnly: MiddlewareHandler<AdminEnv> = async (c, next) => {
+  if (!canManagePeople(c.get("viewer"))) return page(c, notAllowed, 403);
+  await next();
+};
+admin.use("/people", ownersOnly);
+admin.use("/people/*", ownersOnly);
+
 admin.get("/", async (c) => {
-  const site = c.req.query("site") || undefined;
+  const viewer = c.get("viewer");
+  const allowedSiteIds = viewer.allSites ? undefined : viewer.siteIds;
+  const requestedSite = c.req.query("site") || undefined;
+  const site = requestedSite && canSeeSite(viewer, requestedSite) ? requestedSite : undefined;
   const statusParam = c.req.query("status");
   const status = isStatus(statusParam) ? statusParam : undefined;
-  const page = Math.max(1, Number.parseInt(c.req.query("page") ?? "1", 10) || 1);
-  const filter = { siteId: site, status };
+  const pageNumber = Math.max(1, Number.parseInt(c.req.query("page") ?? "1", 10) || 1);
+  const filter = { siteId: site, status, allowedSiteIds };
   const [rows, counts, sites] = await Promise.all([
-    listReports(c.env.DB, filter, PAGE_SIZE + 1, (page - 1) * PAGE_SIZE),
-    countByStatus(c.env.DB, site),
+    listReports(c.env.DB, filter, PAGE_SIZE + 1, (pageNumber - 1) * PAGE_SIZE),
+    countByStatus(c.env.DB, site, allowedSiteIds),
     listSites(c.env.DB),
   ]);
   const deleted = c.req.query("deleted");
-  return c.html(
+  return page(
+    c,
     <InboxPage
       email={c.get("admin")}
       reports={rows.slice(0, PAGE_SIZE)}
       hasMore={rows.length > PAGE_SIZE}
       counts={counts}
-      sites={sites}
+      sites={visibleSites(viewer, sites)}
       filter={filter}
-      page={page}
+      page={pageNumber}
       timeZone={c.env.TIME_ZONE}
       deleted={deleted && /^R-\d{4,}$/.test(deleted) ? deleted : undefined}
     />,
@@ -167,7 +244,8 @@ admin.get("/", async (c) => {
 });
 
 admin.get("/reports.csv", async (c) => {
-  const rows = await listReports(c.env.DB, {}, 1_000_000, 0);
+  const viewer = c.get("viewer");
+  const rows = await listReports(c.env.DB, { allowedSiteIds: viewer.allSites ? undefined : viewer.siteIds }, 1_000_000, 0);
   const howUsed = (json: string) => {
     try {
       return (JSON.parse(json) as AssistiveTech[]).map((t) => ASSISTIVE_TECH[t] ?? t).join("; ");
@@ -195,9 +273,17 @@ admin.get("/reports.csv", async (c) => {
   });
 });
 
-async function findReport(c: { env: Bindings; req: { param: (name: "id") => string } }) {
-  const id = Number.parseInt(c.req.param("id"), 10);
-  return Number.isFinite(id) ? getReport(c.env.DB, id) : null;
+/** The report in the address, or null if it doesn't exist or this person can't see its website. */
+async function findReport(c: Context<AdminEnv>) {
+  const id = Number.parseInt(c.req.param("id") ?? "", 10);
+  const report = Number.isFinite(id) ? await getReport(c.env.DB, id) : null;
+  return report && canSeeSite(c.get("viewer"), report.site_id) ? report : null;
+}
+
+/** The website in the address, or null if it doesn't exist or this person can't see it. */
+async function findSite(c: Context<AdminEnv>) {
+  const site = await getSite(c.env.DB, c.req.param("siteId") ?? "");
+  return site && canSeeSite(c.get("viewer"), site.id) ? site : null;
 }
 
 const notFound = <Message title="Report not found" link={{ href: "/admin", text: "Back to all reports" }}>
@@ -206,8 +292,9 @@ const notFound = <Message title="Report not found" link={{ href: "/admin", text:
 
 admin.get("/reports/:id", async (c) => {
   const report = await findReport(c);
-  if (!report) return c.html(notFound, 404);
-  return c.html(
+  if (!report) return page(c, notFound, 404);
+  return page(
+    c,
     <ReportPage
       email={c.get("admin")}
       report={report}
@@ -220,12 +307,13 @@ admin.get("/reports/:id", async (c) => {
 
 admin.post("/reports/:id", async (c) => {
   const report = await findReport(c);
-  if (!report) return c.html(notFound, 404);
+  if (!report) return page(c, notFound, 404);
   const form = await c.req.parseBody();
   const status = isStatus(form.status) ? form.status : report.status;
   const note = String(form.note ?? "").trim();
   if (note.length > 2000) {
-    return c.html(
+    return page(
+    c,
       <ReportPage
         email={c.get("admin")}
         report={report}
@@ -242,13 +330,13 @@ admin.post("/reports/:id", async (c) => {
 
 admin.get("/reports/:id/delete", async (c) => {
   const report = await findReport(c);
-  if (!report) return c.html(notFound, 404);
-  return c.html(<DeletePage email={c.get("admin")} report={report} />);
+  if (!report) return page(c, notFound, 404);
+  return page(c, <DeletePage email={c.get("admin")} report={report} />);
 });
 
 admin.post("/reports/:id/delete", async (c) => {
   const report = await findReport(c);
-  if (!report) return c.html(notFound, 404);
+  if (!report) return page(c, notFound, 404);
   await deleteReport(c.env.DB, report.id);
   return c.redirect(`/admin?deleted=${reference(report.id)}`, 303);
 });
@@ -264,25 +352,27 @@ const siteNotFound = (
 admin.get("/sites", async (c) => {
   const [sites, counts] = await Promise.all([listSites(c.env.DB), reportCountsBySite(c.env.DB)]);
   const deleted = c.req.query("deleted");
-  return c.html(
+  return page(
+    c,
     <SitesPage
       email={c.get("admin")}
-      sites={sites}
+      sites={visibleSites(c.get("viewer"), sites)}
       counts={counts}
+      canAdd={canManageWebsites(c.get("viewer"))}
       deleted={deleted && /^[a-z0-9.-]{1,253}$/i.test(deleted) ? deleted : undefined}
     />,
   );
 });
 
-admin.get("/sites/new", (c) => c.html(<NewSitePage email={c.get("admin")} values={EMPTY_SITE_FORM} errors={[]} />));
+admin.get("/sites/new", (c) => page(c, <NewSitePage email={c.get("admin")} values={EMPTY_SITE_FORM} errors={[]} />));
 
 admin.post("/sites", async (c) => {
   const { values, input, errors } = validateSite(await c.req.parseBody());
-  if (!input) return c.html(<NewSitePage email={c.get("admin")} values={values} errors={errors} />, 400);
+  if (!input) return page(c, <NewSitePage email={c.get("admin")} values={values} errors={errors} />, 400);
   const id = siteIdFor(input.website);
   if (await getSite(c.env.DB, id)) {
     const duplicate = [{ field: "website" as const, message: `${new URL(input.website).host} is already set up in this portal.` }];
-    return c.html(<NewSitePage email={c.get("admin")} values={values} errors={duplicate} />, 400);
+    return page(c, <NewSitePage email={c.get("admin")} values={values} errors={duplicate} />, 400);
   }
   const now = new Date();
   await createSite(c.env.DB, id, input, now);
@@ -291,9 +381,10 @@ admin.post("/sites", async (c) => {
 });
 
 admin.get("/sites/:siteId", async (c) => {
-  const site = await getSite(c.env.DB, c.req.param("siteId"));
-  if (!site) return c.html(siteNotFound, 404);
-  return c.html(
+  const site = await findSite(c);
+  if (!site) return page(c, siteNotFound, 404);
+  return page(
+    c,
     <SitePage
       email={c.get("admin")}
       site={site}
@@ -307,11 +398,12 @@ admin.get("/sites/:siteId", async (c) => {
 });
 
 admin.post("/sites/:siteId", async (c) => {
-  const site = await getSite(c.env.DB, c.req.param("siteId"));
-  if (!site) return c.html(siteNotFound, 404);
+  const site = await findSite(c);
+  if (!site) return page(c, siteNotFound, 404);
   const { values, input, errors } = validateSite(await c.req.parseBody());
   if (!input) {
-    return c.html(
+    return page(
+    c,
       <SitePage
         email={c.get("admin")}
         site={site}
@@ -332,9 +424,10 @@ admin.post("/sites/:siteId", async (c) => {
 });
 
 admin.get("/sites/:siteId/review", async (c) => {
-  const site = await getSite(c.env.DB, c.req.param("siteId"));
-  if (!site) return c.html(siteNotFound, 404);
-  return c.html(
+  const site = await findSite(c);
+  if (!site) return page(c, siteNotFound, 404);
+  return page(
+    c,
     <ReviewPage
       email={c.get("admin")}
       site={site}
@@ -346,22 +439,22 @@ admin.get("/sites/:siteId/review", async (c) => {
 });
 
 admin.post("/sites/:siteId/review", async (c) => {
-  const site = await getSite(c.env.DB, c.req.param("siteId"));
-  if (!site) return c.html(siteNotFound, 404);
+  const site = await findSite(c);
+  if (!site) return page(c, siteNotFound, 404);
   await recordReview(c.env.DB, site.id, "confirmed", c.get("admin"), new Date());
   return c.redirect(`/admin/sites/${site.id}/review?done=1`, 303);
 });
 
 admin.get("/sites/:siteId/delete", async (c) => {
-  const site = await getSite(c.env.DB, c.req.param("siteId"));
-  if (!site) return c.html(siteNotFound, 404);
+  const site = await findSite(c);
+  if (!site) return page(c, siteNotFound, 404);
   const counts = await reportCountsBySite(c.env.DB);
-  return c.html(<DeleteSitePage email={c.get("admin")} site={site} reportCount={counts[site.id] ?? 0} />);
+  return page(c, <DeleteSitePage email={c.get("admin")} site={site} reportCount={counts[site.id] ?? 0} />);
 });
 
 admin.post("/sites/:siteId/delete", async (c) => {
-  const site = await getSite(c.env.DB, c.req.param("siteId"));
-  if (!site) return c.html(siteNotFound, 404);
+  const site = await findSite(c);
+  if (!site) return page(c, siteNotFound, 404);
   await deleteSite(c.env.DB, site.id);
   return c.redirect(`/admin/sites?deleted=${encodeURIComponent(new URL(site.website).host)}`, 303);
 });
@@ -456,7 +549,7 @@ async function setupPage(c: { env: Bindings; req: { url: string } }, adminEmail:
   );
 }
 
-admin.get("/setup", async (c) => c.html(await setupPage(c, c.get("admin"))));
+admin.get("/setup", async (c) => page(c, await setupPage(c, c.get("admin"))));
 
 admin.post("/setup/test-email", async (c) => {
   const email = c.get("admin");
@@ -465,7 +558,128 @@ admin.post("/setup/test-email", async (c) => {
     tries > 5
       ? { ok: false, message: "You've sent several test emails in the last hour. Please wait a little and try again." }
       : await sendTestEmail(c.env, email);
-  return c.html(await setupPage(c, email, result), result.ok ? 200 : 400);
+  return page(c, await setupPage(c, email, result), result.ok ? 200 : 400);
+});
+
+// ---- People ----
+
+async function peoplePage(
+  c: Context<AdminEnv>,
+  options: { notice?: string; form?: { email: string; access: AccessChoice; errors: PersonFormError[] } } = {},
+) {
+  const [people, sites, events] = await Promise.all([listPeople(c.env.DB), listSites(c.env.DB), listPeopleEvents(c.env.DB)]);
+  return (
+    <PeoplePage
+      email={c.get("admin")}
+      owners={adminEmails(c.env.ADMIN_EMAILS)}
+      people={people}
+      sites={sites}
+      events={events}
+      timeZone={c.env.TIME_ZONE}
+      notice={options.notice}
+      form={options.form}
+    />
+  );
+}
+
+const personNotFound = (
+  <Message title="Person not found" link={{ href: "/admin/people", text: "Back to People" }}>
+    That person isn't on the list. They may already have been removed.
+  </Message>
+);
+
+async function findPerson(c: Context<AdminEnv>) {
+  return getPerson(c.env.DB, decodeURIComponent(c.req.param("email") ?? "").toLowerCase());
+}
+
+admin.get("/people", async (c) => {
+  const added = c.req.query("added");
+  const invited = c.req.query("invited") === "1";
+  const removed = c.req.query("removed");
+  const changed = c.req.query("changed");
+  const clean = (v: string | undefined) => (v && /^[^s<>"]{3,254}$/.test(v) ? v : undefined);
+  const notice = clean(added)
+    ? invited
+      ? `${added} was added and sent an invitation email.`
+      : `${added} was added, but the invitation email couldn't be sent. Ask them to go to ${new URL(c.req.url).origin}/admin/login and type their email address.`
+    : clean(removed)
+      ? `${removed} was removed and logged out.`
+      : clean(changed)
+        ? `What ${changed} can see was updated.`
+        : undefined;
+  return page(c, await peoplePage(c, { notice }));
+});
+
+admin.post("/people", async (c) => {
+  const sites = await listSites(c.env.DB);
+  const parsed = parsePersonForm(await c.req.parseBody({ all: true }), sites, true);
+  const errors = [...parsed.errors];
+  if (errors.length === 0 && adminEmails(c.env.ADMIN_EMAILS).includes(parsed.email)) {
+    errors.push({ field: "email", message: `${parsed.email} is already a portal owner.` });
+  }
+  if (errors.length === 0 && (await getPerson(c.env.DB, parsed.email))) {
+    errors.push({ field: "email", message: `${parsed.email} has already been added.` });
+  }
+  if (errors.length > 0) {
+    return page(c, await peoplePage(c, { form: { email: parsed.email, access: parsed.access, errors } }), 400);
+  }
+  const canSee = describeAccess(parsed.access, sites);
+  await addPerson(c.env.DB, parsed.email, { ...parsed.access, detail: canSee }, c.get("admin"), new Date());
+  const invited = await sendInvitation(
+    c.env,
+    invitationEmail(parsed.email, c.get("admin"), new URL(c.req.url).origin, canSee.replace(/^Only /, "")),
+  );
+  return c.redirect(`/admin/people?added=${encodeURIComponent(parsed.email)}&invited=${invited ? 1 : 0}`, 303);
+});
+
+admin.get("/people/:email", async (c) => {
+  const person = await findPerson(c);
+  if (!person) return page(c, personNotFound, 404);
+  return page(
+    c,
+    <EditPersonPage
+      email={c.get("admin")}
+      person={person}
+      sites={await listSites(c.env.DB)}
+      access={personAccess(person)}
+      errors={[]}
+    />,
+  );
+});
+
+admin.post("/people/:email", async (c) => {
+  const person = await findPerson(c);
+  if (!person) return page(c, personNotFound, 404);
+  const sites = await listSites(c.env.DB);
+  const parsed = parsePersonForm(await c.req.parseBody({ all: true }), sites, false);
+  if (parsed.errors.length > 0) {
+    return page(
+      c,
+      <EditPersonPage email={c.get("admin")} person={person} sites={sites} access={parsed.access} errors={parsed.errors} />,
+      400,
+    );
+  }
+  await changePersonAccess(
+    c.env.DB,
+    person.email,
+    { ...parsed.access, detail: describeAccess(parsed.access, sites) },
+    c.get("admin"),
+    new Date(),
+  );
+  return c.redirect(`/admin/people?changed=${encodeURIComponent(person.email)}`, 303);
+});
+
+admin.get("/people/:email/remove", async (c) => {
+  const person = await findPerson(c);
+  if (!person) return page(c, personNotFound, 404);
+  return page(c, <RemovePersonPage email={c.get("admin")} person={person} />);
+});
+
+admin.post("/people/:email/remove", async (c) => {
+  const person = await findPerson(c);
+  if (!person) return page(c, personNotFound, 404);
+  await removePerson(c.env.DB, person.email, c.get("admin"), new Date());
+  return c.redirect(`/admin/people?removed=${encodeURIComponent(person.email)}`, 303);
 });
 
 export default admin;

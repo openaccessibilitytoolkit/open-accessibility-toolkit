@@ -82,6 +82,13 @@ for a pretend bakery. Reports sent there reach the project team; please only sen
   The date is never changed automatically, so it always reflects a real review. A daily
   Cloudflare schedule (`triggers.crons` in `wrangler.jsonc`) sends it once a month and
   retries the next day if email fails.
+- **People** at `/admin/people` (owners only): add people by email with an invitation,
+  choose whether each person sees **all websites** or **only chosen websites**, change it
+  later, or remove them (they're logged out at once). Everything is recorded with who did
+  it. People limited to some websites can't see, change, download or delete anything
+  belonging to other websites, even by guessing addresses, and don't get **Check my
+  setup**, adding or deleting websites, or **People**. Owners (`ADMIN_EMAILS`) can't be
+  removed from the page.
 - **Check my setup** at `/admin/setup`: plain "Done" / "Needs attention" checks for login,
   email, the sending address, websites and time zone, a **Send me a test email** button
   that explains Resend errors in plain words, and a check that your footer links are
