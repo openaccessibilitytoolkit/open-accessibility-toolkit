@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 (2026-10-20)
+
+**Portal owners: press "Update my portal" to get this release** (see
+[Keep your portal safe and up to date](docs/setup-guide.md#9-keep-your-portal-safe-and-up-to-date)).
+Then click **People** in your portal.
 
 - **New: People.** Portal owners can add people by email (with an invitation), choose
   whether each person sees all websites or only chosen ones, change it later, or remove

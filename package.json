@@ -1,6 +1,6 @@
 {
   "name": "open-a11y",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Free, open-source tool that helps you find and fix website accessibility issues against WCAG 2.2 AA.",
   "license": "MIT",
   "private": true,
