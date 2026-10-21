@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.2 (2026-10-20)
+
+**Portal owners: press "Update my portal" to get this release** (see
+[Keep your portal safe and up to date](docs/setup-guide.md#9-keep-your-portal-safe-and-up-to-date)).
+
+- **Fixed: Check my setup now finds footer links added with a website builder.** Builders
+  like HostGator's keep the page's content in separate files, so the check said the links
+  were missing when they weren't. It now looks in those files too.
+- **Fixed: the People table stays inside its box.** Long email addresses wrap, and on a
+  phone the table scrolls sideways on its own.
+
 ## 1.2.1 (2026-10-20)
 
 **Portal owners: press "Update my portal" to get this release** (see
