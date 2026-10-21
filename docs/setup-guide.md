@@ -162,6 +162,13 @@ someone, click **Remove** next to their name; they're logged out straight away. 
 **portal owners** (the emails in **ADMIN_EMAILS**) can add or remove people, and owners
 can't be removed from the People page, so nobody gets locked out by accident.
 
+**Put the portal on your desktop (optional):** in **Chrome** or **Microsoft Edge**, the
+portal offers an **Install** button (on the **Reports** page, and under **Check my setup**).
+Click it, then click **Install** again in the box that opens. The portal gets its own icon
+on your desktop and in your Start menu, and opens in its own window. It's still the same
+website, so it's always up to date. On a Mac in Safari, open the **File** menu and choose
+**Add to Dock**. On an iPhone or iPad, tap **Share**, then **Add to Home Screen**.
+
 ## 6. Add the footer links to your website
 
 These are two plain links: **"Accessibility statement"** and **"Report an accessibility

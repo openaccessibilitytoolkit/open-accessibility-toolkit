@@ -3,6 +3,7 @@
 import { AdminLayout } from "./admin.js";
 import type { Site } from "./db.js";
 import type { TestEmailResult } from "./email.js";
+import { InstallCard } from "./install.js";
 import { formatTime } from "./timeline.js";
 import { CHANGELOG_URL, updateAvailable, updateWorkflowUrl, type UpdateStatus } from "./updates.js";
 
@@ -327,6 +328,8 @@ export function SetupPage(props: {
         githubForm={props.githubForm}
         githubJustSaved={props.githubJustSaved}
       />
+
+      <InstallCard />
     </AdminLayout>
   );
 }

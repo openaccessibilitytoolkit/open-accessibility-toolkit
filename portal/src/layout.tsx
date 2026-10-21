@@ -71,6 +71,8 @@ const styles = `
   /* Forms */
   .field { margin: 1.5rem 0; }
   .field-status { margin: 0.5rem 0; }
+  .install-offer { margin-bottom: 1.5rem; }
+  .install-offer p { margin: 0.35rem 0; }
   .field:first-child { margin-top: 0; }
   label, legend { display: block; font-weight: 600; }
   .hint { color: var(--muted); margin: 0.25rem 0 0.5rem; }
@@ -249,7 +251,14 @@ export function SiteHeader(props: { name: string; subtitle?: string; href?: stri
   );
 }
 
-export function Layout(props: { title: string; children: Child; header?: Child; wide?: boolean }) {
+/** Where the portal's app settings live (see app.ts). */
+export const APP_MANIFEST_PATH = "/admin/app.webmanifest";
+
+/**
+ * `app` marks the owner's pages: they link the app settings, so Chrome and Edge offer to
+ * install the portal as a desktop app. Visitors' pages only get the browser-tab icon.
+ */
+export function Layout(props: { title: string; children: Child; header?: Child; wide?: boolean; app?: boolean }) {
   return (
     <html lang="en">
       <head>
@@ -257,6 +266,11 @@ export function Layout(props: { title: string; children: Child; header?: Child; 
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="noindex" />
         <title>{props.title}</title>
+        <link rel="icon" href="/favicon.ico" sizes="48x48" />
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <meta name="theme-color" content="#0d5c73" />
+        {props.app && <link rel="manifest" href={APP_MANIFEST_PATH} />}
         {/* Our own fixed CSS, so it is safe to insert as-is; escaping would break the quotes in it. */}
         <style dangerouslySetInnerHTML={{ __html: styles }} />
       </head>

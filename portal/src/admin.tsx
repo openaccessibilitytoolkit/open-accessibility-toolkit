@@ -6,6 +6,7 @@ import { reference, type ReportRow, type Site } from "./db.js";
 import { Layout, SiteHeader } from "./layout.js";
 import { STATUSES, describeEvent, formatTime, type TimelineEvent } from "./timeline.js";
 import { UpdateContext, updateAvailable } from "./updates.js";
+import { InstallOffer } from "./install.js";
 import { ASSISTIVE_TECH, type AssistiveTech } from "./validate.js";
 
 export type AdminSection = "reports" | "sites" | "setup" | "people";
@@ -79,6 +80,7 @@ export function AdminLayout(props: {
       title={`${props.title} - Accessibility portal`}
       header={<AdminHeader email={props.email} section={props.section} sectionHome={props.sectionHome} />}
       wide
+      app
     >
       <UpdateBanner section={props.section} sectionHome={props.sectionHome} />
       {props.children}
@@ -95,7 +97,7 @@ function PortalHeader() {
 
 export function LoginPage(props: { sent?: boolean; error?: string; email?: string }) {
   return (
-    <Layout title={`${props.error ? "Error: " : ""}Log in - Accessibility portal`} header={<PortalHeader />}>
+    <Layout title={`${props.error ? "Error: " : ""}Log in - Accessibility portal`} header={<PortalHeader />} app>
       <h1>Log in to your accessibility portal</h1>
       {props.sent ? (
         <div class="saved" tabindex={-1} autofocus>
@@ -135,7 +137,7 @@ export function LoginPage(props: { sent?: boolean; error?: string; email?: strin
 /** The page the login link opens. The extra click stops email virus-scanners from using up the link. */
 export function VerifyPage(props: { token: string }) {
   return (
-    <Layout title="Log in - Accessibility portal" header={<PortalHeader />}>
+    <Layout title="Log in - Accessibility portal" header={<PortalHeader />} app>
       <h1>Log in</h1>
       <form method="post" action="/admin/login/verify" class="card">
         <p>Press the button to finish logging in on this device. You'll stay logged in for 7 days.</p>
@@ -187,6 +189,7 @@ export function InboxPage(props: {
         </div>
       )}
       <h1>Accessibility reports</h1>
+      <InstallOffer />
       <ul class="counts" aria-label="Reports by status">
         {Object.entries(STATUSES).map(([key, label]) => (
           <li class={key}>

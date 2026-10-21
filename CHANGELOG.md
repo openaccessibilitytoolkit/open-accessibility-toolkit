@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **New: put the portal on your desktop.** In Chrome or Edge, an **Install** button gives
+  the portal its own icon on your desktop and in your Start menu, and it opens in its own
+  window, like a program. There are written steps for Safari, iPhone, iPad and Android too.
+- **New: a browser-tab icon** for every portal page.
+
 ## 1.4.1 (2026-10-21)
 
 **Portal owners: press "Update my portal" to get this release** (see

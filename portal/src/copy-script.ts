@@ -1,4 +1,4 @@
-// The "Copy" buttons on owner pages (one of two small scripts; see scan-script.ts). Served from the
+// The "Copy" buttons on owner pages (one of three small scripts, with scan-script.ts and install-script.ts). Served from the
 // portal itself at /admin/copy.js, and only owner pages are allowed to run it (see the
 // Content-Security-Policy in index.tsx). Visitors' pages have no JavaScript at all.
 //

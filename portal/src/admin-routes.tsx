@@ -92,6 +92,8 @@ import {
 import { longDate } from "./statement.js";
 import { COPY_SCRIPT } from "./copy-script.js";
 import { SCAN_SCRIPT } from "./scan-script.js";
+import { INSTALL_SCRIPT } from "./install-script.js";
+import { APP_MANIFEST } from "./app.js";
 import { ScanPage } from "./scan-pages.js";
 import { getScan, listScanPages, listScans, runScanStep, runningScan, startScan, stopScan } from "./scans.js";
 import { browserChecker } from "./browser-checker.js";
@@ -140,6 +142,20 @@ admin.get("/copy.js", (c) =>
 // The "Check my website" script, which checks one page after another. Public like copy.js.
 admin.get("/scan.js", (c) =>
   c.body(SCAN_SCRIPT, 200, {
+    "Content-Type": "text/javascript; charset=utf-8",
+    "Cache-Control": "public, max-age=3600",
+  }),
+);
+
+// The app settings that let Chrome and Edge install the portal, and the Install button script. Public.
+admin.get("/app.webmanifest", (c) =>
+  c.body(JSON.stringify(APP_MANIFEST), 200, {
+    "Content-Type": "application/manifest+json; charset=utf-8",
+    "Cache-Control": "public, max-age=3600",
+  }),
+);
+admin.get("/install.js", (c) =>
+  c.body(INSTALL_SCRIPT, 200, {
     "Content-Type": "text/javascript; charset=utf-8",
     "Cache-Control": "public, max-age=3600",
   }),

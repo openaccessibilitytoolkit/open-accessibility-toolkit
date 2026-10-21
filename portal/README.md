@@ -99,6 +99,13 @@ for a pretend bakery. Reports sent there reach the project team; please only sen
   other websites. It runs one page per request; a small script (`/admin/scan.js`) presses
   **Check the next page** for you, and without it you press the button yourself. Every
   result says that automated checks find only some problems.
+- **A desktop app, without a download:** owner pages link app settings
+  (`/admin/app.webmanifest`), so Chrome and Edge can install the portal with its own icon
+  in the desktop and Start menu, opening in its own window. An **Install** button appears on
+  the Reports page and under **Check my setup** only when the browser can install it
+  (`/admin/install.js`), with written steps for Safari, iPhone and Android. Every page also
+  has a browser-tab icon. The icons are made by `scripts/make-portal-icons.mjs` in the
+  repository root.
 - **Check my setup** at `/admin/setup`: plain "Done" / "Needs attention" checks for login,
   email, the sending address, websites and time zone, a **Send me a test email** button
   that explains Resend errors in plain words, and a check that your footer links are
@@ -116,7 +123,7 @@ for a pretend bakery. Reports sent there reach the project team; please only sen
   portal's GitHub address once and the button opens your copy's update page on GitHub,
   where you click **Run workflow**. No GitHub key is stored, and nothing updates without
   you clicking.
-- No JavaScript on visitors' pages (owner pages only run the copy and check scripts), strict
+- No JavaScript on visitors' pages (owner pages only run the copy, check and install scripts), strict
   security headers, and every page passes the toolkit's own
   WCAG 2.2 AA scan, including the error state.
 

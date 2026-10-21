@@ -12,6 +12,8 @@ import { RATE_LIMIT, looksAutomated, visitorKey } from "./safeguards.js";
 import { hashSalt } from "./settings.js";
 import { StatementPage } from "./statement.js";
 import { refreshLatestVersion } from "./updates.js";
+import { base64Bytes } from "./app.js";
+import { FAVICON_ICO, ICON_SVG, PNG_ICONS } from "./icons.js";
 import { validateReport } from "./validate.js";
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -123,6 +125,16 @@ app.get("/statement/:siteId", async (c) => {
   const site = await getSite(c.env.DB, c.req.param("siteId"));
   if (!site) return c.html(<Message title="Page not found">We couldn't find that accessibility statement.</Message>, 404);
   return c.html(<StatementPage site={site} timeZone={c.env.TIME_ZONE} />);
+});
+
+// The portal's icons: the browser-tab icon for every page, and the desktop app icons.
+const ICON_CACHE = "public, max-age=86400";
+app.get("/favicon.ico", (c) => c.body(base64Bytes(FAVICON_ICO), 200, { "Content-Type": "image/x-icon", "Cache-Control": ICON_CACHE }));
+app.get("/icon.svg", (c) => c.body(ICON_SVG, 200, { "Content-Type": "image/svg+xml", "Cache-Control": ICON_CACHE }));
+app.get("/icons/:name", (c) => {
+  const icon = PNG_ICONS[c.req.param("name")];
+  if (!icon) return c.notFound();
+  return c.body(base64Bytes(icon), 200, { "Content-Type": "image/png", "Cache-Control": ICON_CACHE });
 });
 
 app.route("/admin", admin);
