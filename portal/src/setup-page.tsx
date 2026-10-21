@@ -28,23 +28,69 @@ const LABELS: Record<CheckState, string> = {
   unknown: "Couldn't check",
 };
 
-/** Looks at a website's home page for the two footer links. */
-export async function checkFooterLinks(site: Site, origin: string): Promise<FooterCheck> {
+function fetchText(url: string): Promise<Response> {
+  return fetch(url, {
+    signal: AbortSignal.timeout(5000),
+    headers: { "User-Agent": "OpenAccessibilityToolkit-Portal/1.0 (setup check)" },
+    redirect: "follow",
+  });
+}
+
+/** Reads at most 2 MB, with "https:\/\/" (how links are written inside scripts) turned back into "https://". */
+async function readText(res: Response): Promise<string> {
+  return (await res.text()).slice(0, 2_000_000).replaceAll("\\/", "/");
+}
+
+/**
+ * The web addresses of the scripts a page loads, like <script src="...">. Builders load their
+ * own tools first and the website's content last, so this keeps the last ones.
+ */
+function scriptAddresses(html: string, pageUrl: string, max: number): string[] {
+  const found: string[] = [];
+  for (const m of html.matchAll(/<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi)) {
+    try {
+      const url = new URL(m[1].replaceAll("&amp;", "&"), pageUrl);
+      if ((url.protocol === "https:" || url.protocol === "http:") && !found.includes(url.href)) found.push(url.href);
+    } catch {
+      // Not a web address: skip it.
+    }
+  }
+  return max > 0 ? found.slice(-max) : [];
+}
+
+/**
+ * Looks at a website's home page for the two footer links. Website builders (like
+ * HostGator's, Wix and others) often put the page's content in script files that the
+ * page loads, so if the links aren't in the page itself, those scripts are read too.
+ */
+export async function checkFooterLinks(site: Site, origin: string, maxScripts = 8): Promise<FooterCheck> {
   try {
-    const res = await fetch(site.website, {
-      signal: AbortSignal.timeout(5000),
-      headers: { "User-Agent": "OpenAccessibilityToolkit-Portal/1.0 (setup check)" },
-      redirect: "follow",
-    });
+    const res = await fetchText(site.website);
     if (!res.ok) return { site, state: "unknown", detail: `Your website answered with error ${res.status}.` };
-    const html = (await res.text()).slice(0, 2_000_000);
-    const hasStatement = html.includes(`${origin}/statement/${site.id}`);
-    const hasReport = html.includes(`${origin}/report/${site.id}`);
+    const html = await readText(res);
+    const statementLink = `${origin}/statement/${site.id}`;
+    const reportLink = `${origin}/report/${site.id}`;
+    let hasStatement = html.includes(statementLink);
+    let hasReport = html.includes(reportLink);
+    if (!hasStatement || !hasReport) {
+      const scripts = await Promise.all(
+        scriptAddresses(html, res.url || site.website, maxScripts).map(async (url) => {
+          try {
+            const script = await fetchText(url);
+            return script.ok ? await readText(script) : "";
+          } catch {
+            return "";
+          }
+        }),
+      );
+      hasStatement ||= scripts.some((s) => s.includes(statementLink));
+      hasReport ||= scripts.some((s) => s.includes(reportLink));
+    }
     if (hasStatement && hasReport) return { site, state: "done", detail: "Both footer links are on your home page." };
     const missing = [!hasStatement && "Accessibility statement", !hasReport && "Report an accessibility problem"]
       .filter(Boolean)
       .join(" and ");
-    return { site, state: "attention", detail: `We couldn't find the "${missing}" link on your home page.` };
+    return { site, state: "attention", detail: `We couldn't find the "${missing}" link on your home page. If you just added the links, check that your website changes are published.` };
   } catch {
     return { site, state: "unknown", detail: "We couldn't open your website from here." };
   }

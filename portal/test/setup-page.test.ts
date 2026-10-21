@@ -74,6 +74,29 @@ describe("Check my setup", () => {
     expect(html).toContain("couldn&#39;t find the &quot;Report an accessibility problem&quot; link");
   });
 
+  it("finds footer links that a website builder puts in a script file", async () => {
+    await addBakery();
+    const asked: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input instanceof Request ? input.url : input);
+      asked.push(url);
+      if (url === "https://joesbakery.com/") {
+        return new Response(
+          `<script src="https://cdn.builder.test/viewer.js"></script><script src='/site/content.js?v=1&amp;x=2'></script>`,
+          { headers: { "Content-Type": "text/html" } },
+        );
+      }
+      if (url === "https://joesbakery.com/site/content.js?v=1&x=2") {
+        const escaped = (path: string) => `${ORIGIN}/${path}/joesbakery-com`.replaceAll("/", "\\/");
+        return new Response(`render("<a href=\\"${escaped("statement")}\\">A</a><a href=\\"${escaped("report")}\\">R</a>")`);
+      }
+      return new Response("var viewer = 1;");
+    });
+    const html = await (await SELF.fetch(`${ORIGIN}/admin/setup`, { headers: { Cookie: await cookie() } })).text();
+    expect(html).toContain("Done:</strong> joesbakery.com");
+    expect(asked).toContain("https://cdn.builder.test/viewer.js");
+  });
+
   it("is honest when the website can't be reached", async () => {
     await addBakery();
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network down"));

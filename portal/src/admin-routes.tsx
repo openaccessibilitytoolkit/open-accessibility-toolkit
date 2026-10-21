@@ -552,7 +552,10 @@ async function setupPage(c: { env: Bindings; req: { url: string } }, adminEmail:
       ? { state: "done", title: `Times are shown in ${env.TIME_ZONE}`, detail: "To change this, update TIME_ZONE in Cloudflare." }
       : { state: "attention", title: `"${env.TIME_ZONE}" isn't a time zone we recognize`, detail: "Use a name like America/New_York or Europe/London. Times are shown in UTC until then." },
   ];
-  const footers = await Promise.all(sites.slice(0, 10).map((site) => checkFooterLinks(site, origin)));
+  // Cloudflare's free plan allows about 50 outside requests per page, so the websites share 30 script reads.
+  const checked = sites.slice(0, 10);
+  const scriptsEach = Math.floor(30 / Math.max(checked.length, 1));
+  const footers = await Promise.all(checked.map((site) => checkFooterLinks(site, origin, scriptsEach)));
   return (
     <SetupPage email={adminEmail} checks={checks} footers={footers} emailConnected={!!env.RESEND_API_KEY} testResult={testResult} />
   );
