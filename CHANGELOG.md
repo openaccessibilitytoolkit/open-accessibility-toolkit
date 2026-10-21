@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.4.0 (2026-10-21)
+
+**Portal owners: press "Update my portal" to get this release** (see
+[Keep your portal safe and up to date](docs/setup-guide.md#9-keep-your-portal-safe-and-up-to-date)).
+The update adds Cloudflare's browser to your portal by itself. Then open any website's
+page in your portal and click **Check my website**.
 
 - **New: Check my website.** On each website's page in the portal, one click checks your
   home page and up to 9 more pages for common WCAG 2.2 problems, in Cloudflare's free
