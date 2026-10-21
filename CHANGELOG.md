@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **New: Check my website.** On each website's page in the portal, one click checks your
+  home page and up to 9 more pages for common WCAG 2.2 problems, in Cloudflare's free
+  browser, with the same checker as the command-line tool. You get what to fix, most
+  serious first, in plain English with examples, and each check is saved so you can see
+  your progress. Automated checks find only some problems, and every result says so.
+- **Fixed:** on phones, long web addresses in the footer link steps no longer make the
+  website page wider than the screen.
+
 ## 1.3.0 (2026-10-20)
 
 **Portal owners: press "Update my portal" to get this release** (see

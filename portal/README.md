@@ -89,6 +89,16 @@ for a pretend bakery. Reports sent there reach the project team; please only sen
   belonging to other websites, even by guessing addresses, and don't get **Check my
   setup**, adding or deleting websites, or **People**. Owners (`ADMIN_EMAILS`) can't be
   removed from the page.
+- **Check my website** on each website's page: the portal opens the home page and up to 9
+  more pages on the same website in Cloudflare's browser (Browser Rendering, free plan:
+  10 minutes a day), checks each with axe-core against WCAG 2.2 A and AA (the same checker
+  and plain-English explanations as the command-line tool), and lists what to fix, most
+  serious first, with where each problem was found. Each check is saved (the last 20 per
+  website) and compared with the previous one. Only websites added to the portal can be
+  checked, only by people who can see that website, and the check never follows links to
+  other websites. It runs one page per request; a small script (`/admin/scan.js`) presses
+  **Check the next page** for you, and without it you press the button yourself. Every
+  result says that automated checks find only some problems.
 - **Check my setup** at `/admin/setup`: plain "Done" / "Needs attention" checks for login,
   email, the sending address, websites and time zone, a **Send me a test email** button
   that explains Resend errors in plain words, and a check that your footer links are
@@ -106,7 +116,7 @@ for a pretend bakery. Reports sent there reach the project team; please only sen
   portal's GitHub address once and the button opens your copy's update page on GitHub,
   where you click **Run workflow**. No GitHub key is stored, and nothing updates without
   you clicking.
-- No JavaScript on visitors' pages (owner pages only run the copy script), strict
+- No JavaScript on visitors' pages (owner pages only run the copy and check scripts), strict
   security headers, and every page passes the toolkit's own
   WCAG 2.2 AA scan, including the error state.
 

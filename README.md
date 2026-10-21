@@ -112,7 +112,9 @@ changes the saved answers.
 
 Give visitors an easy way to report accessibility problems, get emailed when they do,
 keep a dated record of every report and fix, and host an honest accessibility statement.
-Each owner runs their own copy on Cloudflare's free plan.
+It can also check your website for common WCAG 2.2 problems, with the same checker and
+plain-English fixes as the command-line tool. Each owner runs their own copy on
+Cloudflare's free plan.
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit/tree/main/portal)
 
@@ -123,9 +125,6 @@ and [portal/README.md](portal/README.md) for details.
 ## What's next (planned)
 
 1. Progress history: what got fixed and what's new since the last scan.
-2. A free, self-hosted portal on Cloudflare (in `portal/`; [live demo](https://open-a11y-portal.openaccessibilitytoolkit.workers.dev/report/joesbakery-example): report form, emails, login, inbox, websites, statement and footer links): a report-a-problem form with an automatic
-   reply, an email to the owner, and an inbox of reports with dates and status.
-3. A step-by-step setup guide for people who don't code.
 
 ## Tests
 

@@ -91,6 +91,10 @@ import {
 } from "./people.js";
 import { longDate } from "./statement.js";
 import { COPY_SCRIPT } from "./copy-script.js";
+import { SCAN_SCRIPT } from "./scan-script.js";
+import { ScanPage } from "./scan-pages.js";
+import { getScan, listScanPages, listScans, runScanStep, runningScan, startScan, stopScan } from "./scans.js";
+import { browserChecker } from "./browser-checker.js";
 import { STATUSES, formatTime, isStatus } from "./timeline.js";
 import { ASSISTIVE_TECH, isEmail, type AssistiveTech } from "./validate.js";
 
@@ -128,6 +132,14 @@ admin.use(async (c, next) => {
 // The copy-button script. Public (it contains nothing private), cached for an hour so updates arrive quickly.
 admin.get("/copy.js", (c) =>
   c.body(COPY_SCRIPT, 200, {
+    "Content-Type": "text/javascript; charset=utf-8",
+    "Cache-Control": "public, max-age=3600",
+  }),
+);
+
+// The "Check my website" script, which checks one page after another. Public like copy.js.
+admin.get("/scan.js", (c) =>
+  c.body(SCAN_SCRIPT, 200, {
     "Content-Type": "text/javascript; charset=utf-8",
     "Cache-Control": "public, max-age=3600",
   }),
@@ -421,6 +433,7 @@ admin.get("/sites/:siteId", async (c) => {
       errors={[]}
       saved={c.req.query("saved") === "1"}
       timeZone={c.env.TIME_ZONE}
+      scans={await listScans(c.env.DB, site.id, 6)}
     />,
   );
 });
@@ -439,6 +452,7 @@ admin.post("/sites/:siteId", async (c) => {
         values={values}
         errors={errors}
         timeZone={c.env.TIME_ZONE}
+        scans={await listScans(c.env.DB, site.id, 6)}
       />,
       400,
     );
@@ -485,6 +499,79 @@ admin.post("/sites/:siteId/delete", async (c) => {
   if (!site) return page(c, siteNotFound, 404);
   await deleteSite(c.env.DB, site.id);
   return c.redirect(`/admin/sites?deleted=${encodeURIComponent(new URL(site.website).host)}`, 303);
+});
+
+// ---- Check my website ----
+
+/** A check left "running" this long was abandoned (its page was closed); a new one replaces it. */
+const ABANDONED_SCAN_MS = 30 * 60 * 1000;
+
+const scanNotFound = (
+  <Message title="Check not found" link={{ href: "/admin/sites", text: "Back to your websites" }}>
+    That check doesn't exist. Older checks are removed after 20 newer ones.
+  </Message>
+);
+
+async function findScan(c: Context<AdminEnv>, siteId: string) {
+  const id = Number(c.req.param("scanId"));
+  return Number.isSafeInteger(id) ? getScan(c.env.DB, siteId, id) : null;
+}
+
+admin.post("/sites/:siteId/scan", async (c) => {
+  const site = await findSite(c);
+  if (!site) return page(c, siteNotFound, 404);
+  const now = new Date();
+  const running = await runningScan(c.env.DB, site.id);
+  if (running) {
+    if (now.getTime() - Date.parse(running.started_at) < ABANDONED_SCAN_MS) {
+      return c.redirect(`/admin/sites/${site.id}/scans/${running.id}`, 303);
+    }
+    await stopScan(c.env.DB, running.id, now);
+  }
+  const id = await startScan(c.env.DB, site.id, site.website, c.get("admin"), now);
+  return c.redirect(`/admin/sites/${site.id}/scans/${id}`, 303);
+});
+
+admin.get("/sites/:siteId/scans/:scanId", async (c) => {
+  const site = await findSite(c);
+  if (!site) return page(c, siteNotFound, 404);
+  const scan = await findScan(c, site.id);
+  if (!scan) return page(c, scanNotFound, 404);
+  const previous =
+    (await listScans(c.env.DB, site.id)).find((s) => s.status === "done" && s.pages > 0 && s.started_at < scan.started_at) ?? null;
+  return page(
+    c,
+    <ScanPage
+      email={c.get("admin")}
+      site={site}
+      scan={scan}
+      pages={await listScanPages(c.env.DB, scan.id)}
+      previous={previous}
+      timeZone={c.env.TIME_ZONE}
+      justFinished={c.req.query("finished") === "1"}
+    />,
+  );
+});
+
+/** Checks the next page. The scan script calls this one page after another, asking for JSON. */
+admin.post("/sites/:siteId/scans/:scanId/next", async (c) => {
+  const site = await findSite(c);
+  if (!site) return page(c, siteNotFound, 404);
+  const scan = await findScan(c, site.id);
+  if (!scan) return page(c, scanNotFound, 404);
+  const result = await runScanStep(c.env.DB, scan, (session) => browserChecker(c.env.BROWSER, session), new Date());
+  if (c.req.header("Accept")?.includes("application/json")) return c.json(result);
+  const base = `/admin/sites/${site.id}/scans/${scan.id}`;
+  return c.redirect(result.state === "finished" ? `${base}?finished=1` : base, 303);
+});
+
+admin.post("/sites/:siteId/scans/:scanId/stop", async (c) => {
+  const site = await findSite(c);
+  if (!site) return page(c, siteNotFound, 404);
+  const scan = await findScan(c, site.id);
+  if (!scan) return page(c, scanNotFound, 404);
+  await stopScan(c.env.DB, scan.id, new Date());
+  return c.redirect(`/admin/sites/${site.id}/scans/${scan.id}`, 303);
 });
 
 // ---- Check my setup ----

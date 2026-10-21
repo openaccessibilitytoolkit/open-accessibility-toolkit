@@ -281,6 +281,8 @@ export async function deleteSite(db: D1Database, id: string): Promise<void> {
     db.prepare("DELETE FROM reports WHERE site_id = ?").bind(id),
     db.prepare("DELETE FROM person_sites WHERE site_id = ?").bind(id),
     db.prepare("DELETE FROM site_reviews WHERE site_id = ?").bind(id),
+    db.prepare("DELETE FROM scan_pages WHERE scan_id IN (SELECT id FROM scans WHERE site_id = ?)").bind(id),
+    db.prepare("DELETE FROM scans WHERE site_id = ?").bind(id),
     db.prepare("DELETE FROM sites WHERE id = ?").bind(id),
   ]);
 }

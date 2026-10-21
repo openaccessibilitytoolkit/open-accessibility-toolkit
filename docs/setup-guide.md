@@ -185,6 +185,20 @@ Then:
 Menu names change from time to time, so look for something similar if yours differs.
 Then publish your website.
 
+### Check your website for accessibility problems
+
+On your website's page in the portal, click **Check my website**. The portal opens your
+home page and up to 9 more of its pages in Cloudflare's browser, checks each one for
+common WCAG 2.2 problems, and lists what to fix, most serious first, in plain English
+with an example of each fix. Keep the page open while it runs; it takes about a minute.
+
+- Each check is saved, so you can see your progress over time.
+- Automated checks find only some kinds of problems. A clean result doesn't mean your
+  website is accessible or meets the law, so also try it with only a keyboard and with
+  a screen reader.
+- Cloudflare's free plan includes 10 minutes of browser time a day, enough for several
+  checks. If it runs out, the portal says so and you can check again the next day.
+
 ## 7. Verify your domain in Resend
 
 Until you do this, Resend only delivers emails to the address you signed up to Resend

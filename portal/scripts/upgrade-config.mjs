@@ -23,6 +23,30 @@ export const UPGRADES = [
   "triggers": { "crons": ["0 13 * * *"] },
 `,
   },
+  {
+    key: "compatibility_flags",
+    why: "Node.js support, which Cloudflare's browser library needs for Check my website",
+    text: `  // Added automatically by scripts/upgrade-config.mjs: Node.js support, which
+  // Cloudflare's browser library needs for "Check my website".
+  "compatibility_flags": ["nodejs_compat"],
+`,
+  },
+  {
+    key: "browser",
+    why: "Cloudflare's browser, for Check my website",
+    text: `  // Added automatically by scripts/upgrade-config.mjs: Cloudflare's browser, for
+  // "Check my website" (free plan: 10 minutes a day).
+  "browser": { "binding": "BROWSER" },
+`,
+  },
+  {
+    key: "rules",
+    why: "hands axe-core (the checker) to that browser as plain text",
+    text: `  // Added automatically by scripts/upgrade-config.mjs: hands axe-core (the checker)
+  // to that browser as plain text.
+  "rules": [{ "type": "Text", "globs": ["**/axe.min.js"], "fallthrough": true }],
+`,
+  },
 ];
 
 /** Returns the upgraded config text, and what was added. Never removes or changes existing settings. */

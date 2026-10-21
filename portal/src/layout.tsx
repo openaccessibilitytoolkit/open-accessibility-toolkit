@@ -177,6 +177,19 @@ const styles = `
   .prose h1 { font-size: 2rem; }
   .report-layout { display: grid; gap: 0 1.5rem; align-items: start; }
   .card details { border-color: var(--line); }
+  .impact { display: inline-block; font-size: 0.9rem; font-weight: 700; padding: 0.1rem 0.65rem; border-radius: 999px; }
+  .impact.critical, .impact.serious { color: var(--error); background: var(--error-tint); }
+  .impact.moderate { color: #6b4200; background: #fff1cc; }
+  .impact.minor { color: var(--muted); background: var(--panel); }
+  .problem h3 { margin-top: 0; }
+  .problem details { margin-top: 0.75rem; }
+  /* Code examples wrap instead of scrolling, so keyboard users never need to scroll inside them. */
+  .problem pre { background: var(--panel); border-radius: 8px; padding: 0.75rem 1rem; margin-top: 0;
+                 white-space: pre-wrap; overflow-wrap: anywhere; }
+  .card details li { overflow-wrap: anywhere; }
+  .code-label { font-weight: 600; margin-bottom: 0.25rem; }
+  .found-list code { overflow-wrap: anywhere; font-size: 0.9rem; }
+  .found-list ul { padding-left: 1.25rem; }
   .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
                      clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   @media (min-width: 60rem) {

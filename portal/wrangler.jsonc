@@ -4,7 +4,12 @@
   "name": "open-a11y-portal",
   "main": "src/index.tsx",
   "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
+  // Cloudflare's browser, for "Check my website" (free plan: 10 minutes a day).
+  "browser": { "binding": "BROWSER" },
+  // Hands axe-core (the checker) to that browser as plain text.
+  "rules": [{ "type": "Text", "globs": ["**/axe.min.js"], "fallthrough": true }],
   // Every day at 13:00 UTC (about 9am US Eastern). The portal sends the monthly
   // statement review reminder on the first of these days in each month.
   "triggers": { "crons": ["0 13 * * *"] },

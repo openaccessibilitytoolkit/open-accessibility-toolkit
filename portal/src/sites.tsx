@@ -6,6 +6,7 @@ import { SITE_LIMITS, type SiteField, type SiteFieldError, type SiteFormValues }
 import { footerHtml, knownProblemList, longDate, reportPath, statementPath } from "./statement.js";
 import { formatTime } from "./timeline.js";
 import { COPY_SCRIPT_PATH } from "./copy-script.js";
+import { ScanCard, type ScanSummary } from "./scan-pages.js";
 
 /**
  * A "Copy" button. Hidden until the copy script confirms the browser can copy; the
@@ -249,6 +250,7 @@ export function SitePage(props: {
   errors: SiteFieldError[];
   saved?: boolean;
   timeZone: string;
+  scans?: ScanSummary[];
 }) {
   const { site, origin } = props;
   const statementUrl = `${origin}${statementPath(site)}`;
@@ -284,6 +286,8 @@ export function SitePage(props: {
             <a href={`/admin/sites/${site.id}/review`}>Review it now</a>
           </p>
         </div>
+
+        {props.scans && <ScanCard site={site} scans={props.scans} timeZone={props.timeZone} />}
 
         <div class="card">
           <h2>Add these links to your website's footer</h2>

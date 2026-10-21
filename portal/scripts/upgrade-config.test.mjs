@@ -22,18 +22,23 @@ const ownerConfig = `// Cloudflare settings for the portal. See README.md in thi
 }
 `;
 
-test("adds the daily schedule to an owner's settings, keeping everything else", () => {
+test("adds the daily schedule and the browser settings to an owner's settings, keeping everything else", () => {
   const { text, added } = upgrade(ownerConfig);
-  assert.deepEqual(added.map((u) => u.key), ["triggers"]);
-  assert.match(text, /"triggers": \{ "crons": \["0 13 \* \* \*"\] \},\n  "d1_databases"/);
+  assert.deepEqual(added.map((u) => u.key), ["triggers", "compatibility_flags", "browser", "rules"]);
+  assert.match(text, /"triggers": \{ "crons": \["0 13 \* \* \*"\] \},\n/);
+  assert.match(text, /"compatibility_flags": \["nodejs_compat"\],\n/);
+  assert.match(text, /"browser": \{ "binding": "BROWSER" \},\n/);
+  assert.match(text, /"rules": \[\{ "type": "Text", "globs": \["\*\*\/axe\.min\.js"\], "fallthrough": true \}\],\n  "d1_databases"/);
+  // Still valid once the comments are taken out.
+  assert.doesNotThrow(() => JSON.parse(text.replace(/^\s*\/\/.*$/gm, "")));
   for (const keep of ['"name": "joes-bakery-portal"', '"database_name": "joes-bakery-portal"', '"database_id": "10d6aef3-638c-497a-a168-a1fe916fcf15"']) {
     assert.ok(text.includes(keep), `kept ${keep}`);
   }
   // Removing what was added gives back exactly the original file.
-  assert.equal(text.replace(added[0].text, ""), ownerConfig);
+  assert.equal(added.reduce((t, u) => t.replace(u.text, ""), text), ownerConfig);
 });
 
-test("changes nothing when the schedule is already there", () => {
+test("changes nothing when everything is already there", () => {
   const once = upgrade(ownerConfig).text;
   const twice = upgrade(once);
   assert.equal(twice.text, once);
@@ -42,7 +47,10 @@ test("changes nothing when the schedule is already there", () => {
 
 test("never replaces an owner's own schedule", () => {
   const custom = ownerConfig.replace('  "d1_databases"', '  "triggers": { "crons": ["0 8 * * 1"] },\n  "d1_databases"');
-  assert.equal(upgrade(custom).text, custom);
+  const { text, added } = upgrade(custom);
+  assert.ok(!added.some((u) => u.key === "triggers"));
+  assert.ok(text.includes('"crons": ["0 8 * * 1"]'));
+  assert.ok(!text.includes('"crons": ["0 13 * * *"]'));
 });
 
 test("stops with a clear message if the settings file looks unfamiliar", () => {
