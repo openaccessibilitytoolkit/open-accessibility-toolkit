@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.5.0 (2026-10-21)
+
+**Portal owners: press "Update my portal" to get this release** (see
+[Keep your portal safe and up to date](docs/setup-guide.md#9-keep-your-portal-safe-and-up-to-date)).
+Then look for the **Install** button on your **Reports** page (in Chrome or Edge).
 
 - **New: put the portal on your desktop.** In Chrome or Edge, an **Install** button gives
   the portal its own icon on your desktop and in your Start menu, and it opens in its own
