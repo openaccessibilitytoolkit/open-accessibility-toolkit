@@ -123,6 +123,8 @@ function UpdateSection(props: {
   timeZone: string;
   isOwner: boolean;
   githubForm?: GithubCopyForm;
+  /** True right after the GitHub address was saved or removed: the box's status takes the focus. */
+  githubJustSaved?: boolean;
 }) {
   const { update, githubForm } = props;
   const available = updateAvailable(update);
@@ -189,13 +191,30 @@ function UpdateSection(props: {
       </form>
 
       {props.isOwner && (
-        <form method="post" action="/admin/setup/github-copy" class="card" novalidate>
+        <form method="post" action="/admin/setup/github-copy" class="card" id="github-address" novalidate>
           <div class="field">
             <label for="github-copy">Your portal's GitHub address</label>
             <p id="github-copy-hint" class="hint">
               The address of your own copy of the portal on GitHub, like https://github.com/your-name/open-a11y-portal.
               The Update my portal button opens its update page. Leave it empty to remove it.
             </p>
+            {!githubForm?.error && (
+              // Right next to the box, so it's clear it saved without scrolling to the top of the page.
+              <p
+                id="github-copy-status"
+                class="field-status"
+                tabindex={props.githubJustSaved ? -1 : undefined}
+                autofocus={props.githubJustSaved}
+              >
+                {update.githubCopy ? (
+                  <>
+                    <Status state="done" /> Saved. Update my portal opens github.com/{update.githubCopy}.
+                  </>
+                ) : (
+                  "No GitHub address saved yet."
+                )}
+              </p>
+            )}
             {githubForm?.error && (
               <p id="github-copy-error" class="error-message">
                 Error: {githubForm.error}
@@ -208,7 +227,7 @@ function UpdateSection(props: {
               value={githubValue}
               autocomplete="url"
               aria-invalid={githubForm?.error ? "true" : undefined}
-              aria-describedby={githubForm?.error ? "github-copy-hint github-copy-error" : "github-copy-hint"}
+              aria-describedby={githubForm?.error ? "github-copy-hint github-copy-error" : "github-copy-hint github-copy-status"}
               autofocus={!!githubForm?.error}
             />
           </div>
@@ -230,6 +249,7 @@ export function SetupPage(props: {
   timeZone: string;
   isOwner: boolean;
   githubForm?: GithubCopyForm;
+  githubJustSaved?: boolean;
 }) {
   const attention = props.checks.filter((c) => c.state === "attention").length
     + props.footers.filter((f) => f.state === "attention").length
@@ -300,7 +320,13 @@ export function SetupPage(props: {
         </>
       )}
 
-      <UpdateSection update={props.update} timeZone={props.timeZone} isOwner={props.isOwner} githubForm={props.githubForm} />
+      <UpdateSection
+        update={props.update}
+        timeZone={props.timeZone}
+        isOwner={props.isOwner}
+        githubForm={props.githubForm}
+        githubJustSaved={props.githubJustSaved}
+      />
     </AdminLayout>
   );
 }

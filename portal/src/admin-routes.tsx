@@ -613,7 +613,7 @@ function reviewChecks(sites: Site[], timeZone: string, now = Date.now()): Check[
 
 async function setupPage(
   c: Context<AdminEnv>,
-  options: { testResult?: TestEmailResult; notice?: string; githubForm?: GithubCopyForm } = {},
+  options: { testResult?: TestEmailResult; notice?: string; githubForm?: GithubCopyForm; githubJustSaved?: boolean } = {},
 ) {
   const env = c.env;
   const viewer = c.get("viewer");
@@ -674,6 +674,7 @@ async function setupPage(
       emailConnected={!!env.RESEND_API_KEY}
       testResult={options.testResult}
       notice={options.notice}
+      githubJustSaved={options.githubJustSaved}
       update={c.get("update") ?? (await getUpdateStatus(env.DB))}
       timeZone={env.TIME_ZONE}
       isOwner={viewer.owner}
@@ -683,14 +684,8 @@ async function setupPage(
 }
 
 admin.get("/setup", async (c) => {
-  const copy = c.get("update")?.githubCopy;
-  const notice =
-    c.req.query("saved") === "github"
-      ? copy
-        ? `Saved. Update my portal now opens github.com/${copy}.`
-        : "Removed your portal's GitHub address."
-      : undefined;
-  return page(c, await setupPage(c, { notice }));
+  // Right after saving the GitHub address, its box says so (and takes the focus), next to where the owner typed.
+  return page(c, await setupPage(c, { githubJustSaved: c.req.query("saved") === "github" }));
 });
 
 /** Asks GitHub for the latest version now, instead of waiting for the daily check. */
@@ -720,7 +715,7 @@ admin.post("/setup/github-copy", async (c) => {
   const value = typeof form.github_copy === "string" ? form.github_copy.trim().slice(0, 300) : "";
   if (value === "") {
     await setSetting(c.env.DB, GITHUB_COPY_SETTING, "");
-    return c.redirect("/admin/setup?saved=github#updates", 303);
+    return c.redirect("/admin/setup?saved=github#github-address", 303);
   }
   const copy = parseGithubCopy(value);
   if (!copy) {
@@ -728,7 +723,7 @@ admin.post("/setup/github-copy", async (c) => {
     return page(c, await setupPage(c, { githubForm }), 400);
   }
   await setSetting(c.env.DB, GITHUB_COPY_SETTING, copy);
-  return c.redirect("/admin/setup?saved=github#updates", 303);
+  return c.redirect("/admin/setup?saved=github#github-address", 303);
 });
 
 admin.post("/setup/test-email", async (c) => {

@@ -70,6 +70,7 @@ const styles = `
 
   /* Forms */
   .field { margin: 1.5rem 0; }
+  .field-status { margin: 0.5rem 0; }
   .field:first-child { margin-top: 0; }
   label, legend { display: block; font-weight: 600; }
   .hint { color: var(--muted); margin: 0.25rem 0 0.5rem; }

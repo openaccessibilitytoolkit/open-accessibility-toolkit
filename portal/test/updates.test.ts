@@ -191,11 +191,23 @@ describe("telling owners", () => {
     await knowLatest(NEWER);
     const res = await post("/admin/setup/github-copy", { github_copy: "https://github.com/m7academy/open-a11y-portal" });
     expect(res.status).toBe(303);
-    expect(res.headers.get("Location")).toBe("/admin/setup?saved=github#updates");
+    // Back to the box itself, not the top of the page.
+    expect(res.headers.get("Location")).toBe("/admin/setup?saved=github#github-address");
     const setup = await html("/admin/setup?saved=github");
-    expect(setup).toContain("Saved. Update my portal now opens github.com/m7academy/open-a11y-portal.");
+    // A green "Done" right in the box, which takes the focus so it's seen and read out.
+    expect(setup).toMatch(
+      /<p id="github-copy-status" class="field-status" tabindex="-1" autofocus="">\s*<strong class="status done">.*?Done:<\/strong> Saved\. Update my portal opens github\.com\/m7academy\/open-a11y-portal\./s,
+    );
     expect(setup).toContain(`href="https://github.com/m7academy/open-a11y-portal/actions/workflows/update-portal.yml">Update my portal</a>`);
     expect(setup).toContain(`value="https://github.com/m7academy/open-a11y-portal"`);
+    // Later visits still show it's saved, without moving the focus.
+    const later = await html("/admin/setup");
+    expect(later).toContain(`<p id="github-copy-status" class="field-status">`);
+    expect(later).toContain("Saved. Update my portal opens github.com/m7academy/open-a11y-portal.");
+  });
+
+  it("says when no GitHub address is saved", async () => {
+    expect(await html("/admin/setup")).toContain("No GitHub address saved yet.");
   });
 
   it("explains a wrong GitHub address", async () => {
@@ -211,6 +223,7 @@ describe("telling owners", () => {
     await post("/admin/setup/github-copy", { github_copy: "github.com/m7academy/open-a11y-portal" });
     await post("/admin/setup/github-copy", { github_copy: "" });
     expect((await getUpdateStatus(env.DB)).githubCopy).toBeNull();
+    expect(await html("/admin/setup?saved=github")).toContain("No GitHub address saved yet.");
   });
 
   it("only lets owners change the GitHub address", async () => {

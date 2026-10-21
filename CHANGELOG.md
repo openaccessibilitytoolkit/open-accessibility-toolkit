@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Clearer: saving your portal's GitHub address.** A green "Saved" check now shows right
+  in the GitHub address box, and after you click **Save GitHub address** the page stays on
+  that box instead of jumping to the top.
+
 ## 1.4.0 (2026-10-21)
 
 **Portal owners: press "Update my portal" to get this release** (see
