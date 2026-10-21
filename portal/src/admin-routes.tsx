@@ -65,7 +65,16 @@ import {
   sendTestEmail,
   type TestEmailResult,
 } from "./email.js";
-import { SETUP_GUIDE_URL, SetupPage, checkFooterLinks, type Check } from "./setup-page.js";
+import { SETUP_GUIDE_URL, SetupPage, checkFooterLinks, type Check, type GithubCopyForm } from "./setup-page.js";
+import {
+  GITHUB_COPY_SETTING,
+  UpdateContext,
+  getUpdateStatus,
+  parseGithubCopy,
+  refreshLatestVersion,
+  updateAvailable,
+  type UpdateStatus,
+} from "./updates.js";
 import { Message } from "./pages.js";
 import { visitorKey } from "./safeguards.js";
 import { EMPTY_SITE_FORM, formValuesFromSite, siteIdFor, validateSite } from "./site-form.js";
@@ -90,12 +99,20 @@ const PAGE_SIZE = 50;
 const LOGIN_REQUESTS_PER_HOUR = 10;
 const HOUR = 60 * 60 * 1000;
 
-type AdminEnv = { Bindings: Bindings; Variables: { admin: string; viewer: Viewer } };
+type AdminEnv = { Bindings: Bindings; Variables: { admin: string; viewer: Viewer; update: UpdateStatus | null } };
 const admin = new Hono<AdminEnv>();
 
-/** Renders an owner page, letting the menu know who's looking (so it only shows what they can use). */
+/**
+ * Renders an owner page, letting the menu know who's looking (so it only shows what they can
+ * use) and, for portal owners, whether an update is available.
+ */
 function page(c: Context<AdminEnv>, content: JSX.Element, status: 200 | 400 | 403 | 404 = 200) {
-  return c.html(<ViewerContext.Provider value={c.get("viewer")}>{content}</ViewerContext.Provider>, status);
+  return c.html(
+    <ViewerContext.Provider value={c.get("viewer")}>
+      <UpdateContext.Provider value={c.get("update") ?? null}>{content}</UpdateContext.Provider>
+    </ViewerContext.Provider>,
+    status,
+  );
 }
 
 // Other websites can't submit forms here on your behalf (checks the Origin header).
@@ -185,6 +202,8 @@ admin.use(async (c, next) => {
   }
   c.set("admin", viewer.email);
   c.set("viewer", viewer);
+  // Only portal owners are told about updates (they're the ones who can run them).
+  c.set("update", viewer.owner ? await getUpdateStatus(c.env.DB) : null);
   // Remember the portal's own address (for the monthly review email's links). Admins who
   // stay logged in never pass through the login page, so check on every visit.
   const origin = new URL(c.req.url).origin;
@@ -505,8 +524,12 @@ function reviewChecks(sites: Site[], timeZone: string, now = Date.now()): Check[
   }));
 }
 
-async function setupPage(c: { env: Bindings; req: { url: string } }, adminEmail: string, testResult?: TestEmailResult) {
+async function setupPage(
+  c: Context<AdminEnv>,
+  options: { testResult?: TestEmailResult; notice?: string; githubForm?: GithubCopyForm } = {},
+) {
   const env = c.env;
+  const viewer = c.get("viewer");
   const origin = new URL(c.req.url).origin;
   const sites = await listSites(env.DB);
   const admins = adminEmails(env.ADMIN_EMAILS);
@@ -557,11 +580,69 @@ async function setupPage(c: { env: Bindings; req: { url: string } }, adminEmail:
   const scriptsEach = Math.floor(30 / Math.max(checked.length, 1));
   const footers = await Promise.all(checked.map((site) => checkFooterLinks(site, origin, scriptsEach)));
   return (
-    <SetupPage email={adminEmail} checks={checks} footers={footers} emailConnected={!!env.RESEND_API_KEY} testResult={testResult} />
+    <SetupPage
+      email={viewer.email}
+      checks={checks}
+      footers={footers}
+      emailConnected={!!env.RESEND_API_KEY}
+      testResult={options.testResult}
+      notice={options.notice}
+      update={c.get("update") ?? (await getUpdateStatus(env.DB))}
+      timeZone={env.TIME_ZONE}
+      isOwner={viewer.owner}
+      githubForm={options.githubForm}
+    />
   );
 }
 
-admin.get("/setup", async (c) => page(c, await setupPage(c, c.get("admin"))));
+admin.get("/setup", async (c) => {
+  const copy = c.get("update")?.githubCopy;
+  const notice =
+    c.req.query("saved") === "github"
+      ? copy
+        ? `Saved. Update my portal now opens github.com/${copy}.`
+        : "Removed your portal's GitHub address."
+      : undefined;
+  return page(c, await setupPage(c, { notice }));
+});
+
+/** Asks GitHub for the latest version now, instead of waiting for the daily check. */
+admin.post("/setup/check-updates", async (c) => {
+  const before = (await getUpdateStatus(c.env.DB)).latest;
+  // At most once a minute, whoever asks.
+  const recent = before && Date.now() - Date.parse(before.checkedAt) < 60 * 1000;
+  const latest = recent ? before : await refreshLatestVersion(c.env.DB, new Date());
+  const update = await getUpdateStatus(c.env.DB);
+  if (c.get("viewer").owner) c.set("update", update);
+  if (!latest) {
+    return page(
+      c,
+      await setupPage(c, { testResult: { ok: false, message: "We couldn't reach GitHub to check for updates. Please try again later." } }),
+    );
+  }
+  const notice = updateAvailable(update)
+    ? `Version ${latest.version} is available. See Updates below.`
+    : `You're on the latest version (${update.current}).`;
+  return page(c, await setupPage(c, { notice }));
+});
+
+/** Saves the owner's copy on GitHub, so Update my portal opens its update page. Owners only. */
+admin.post("/setup/github-copy", async (c) => {
+  if (!c.get("viewer").owner) return page(c, notAllowed, 403);
+  const form = await c.req.parseBody();
+  const value = typeof form.github_copy === "string" ? form.github_copy.trim().slice(0, 300) : "";
+  if (value === "") {
+    await setSetting(c.env.DB, GITHUB_COPY_SETTING, "");
+    return c.redirect("/admin/setup?saved=github#updates", 303);
+  }
+  const copy = parseGithubCopy(value);
+  if (!copy) {
+    const githubForm = { value, error: "Please paste your portal's GitHub address, like https://github.com/your-name/open-a11y-portal" };
+    return page(c, await setupPage(c, { githubForm }), 400);
+  }
+  await setSetting(c.env.DB, GITHUB_COPY_SETTING, copy);
+  return c.redirect("/admin/setup?saved=github#updates", 303);
+});
 
 admin.post("/setup/test-email", async (c) => {
   const email = c.get("admin");
@@ -570,7 +651,7 @@ admin.post("/setup/test-email", async (c) => {
     tries > 5
       ? { ok: false, message: "You've sent several test emails in the last hour. Please wait a little and try again." }
       : await sendTestEmail(c.env, email);
-  return page(c, await setupPage(c, email, result), result.ok ? 200 : 400);
+  return page(c, await setupPage(c, { testResult: result }), result.ok ? 200 : 400);
 });
 
 // ---- People ----

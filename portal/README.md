@@ -99,6 +99,13 @@ for a pretend bakery. Reports sent there reach the project team; please only sen
   They come from one small script the portal serves itself (`/admin/copy.js`), which only
   owner pages may run. If the browser blocks the clipboard, it tries the older copy
   command, and if that fails too, it says so. Without the script, the buttons stay hidden.
+- **Update my portal, from the portal:** the portal knows its version and checks the
+  project's latest version once a day (the daily Cloudflare schedule) or when you click
+  **Check for updates now**. Owners see **An update is available** on every page, and
+  **Check my setup** lists what's new with an **Update my portal** button. Save your
+  portal's GitHub address once and the button opens your copy's update page on GitHub,
+  where you click **Run workflow**. No GitHub key is stored, and nothing updates without
+  you clicking.
 - No JavaScript on visitors' pages (owner pages only run the copy script), strict
   security headers, and every page passes the toolkit's own
   WCAG 2.2 AA scan, including the error state.

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **New: Update my portal, from the portal.** Your portal checks once a day for a new
+  version. Owners see **An update is available** at the top of every page, and **Check my
+  setup** shows what's new with an **Update my portal** button. Paste your portal's GitHub
+  address there once, and the button opens your update page on GitHub directly.
+
 ## 1.2.2 (2026-10-20)
 
 **Portal owners: press "Update my portal" to get this release** (see

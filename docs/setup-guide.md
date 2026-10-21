@@ -235,6 +235,16 @@ portal with the date and who did it. Saving a website's details also counts as a
 Your portal is your own copy, so improvements and security fixes from the Open
 Accessibility Toolkit project don't reach it by themselves. Updating takes one click.
 
+**Your portal tells you when there's an update.** It checks once a day. When a new
+version is out, portal owners see **An update is available** at the top of every page,
+and **Check my setup** shows what's new with an **Update my portal** button.
+
+**Make the button go straight to your update page (once):** in **Check my setup**, under
+**Updates**, paste your portal's GitHub address (like
+`https://github.com/your-name/open-a11y-portal`) into **Your portal's GitHub address**
+and click **Save GitHub address**. After that, **Update my portal** opens your update
+page on GitHub, and you only need steps 4 and 5 below.
+
 **To update your portal:**
 
 1. On [github.com](https://github.com), open your copy of the portal: click your

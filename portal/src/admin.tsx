@@ -5,6 +5,7 @@ import { ViewerContext, canManagePeople, canManageWebsites } from "./access.js";
 import { reference, type ReportRow, type Site } from "./db.js";
 import { Layout, SiteHeader } from "./layout.js";
 import { STATUSES, describeEvent, formatTime, type TimelineEvent } from "./timeline.js";
+import { UpdateContext, updateAvailable } from "./updates.js";
 import { ASSISTIVE_TECH, type AssistiveTech } from "./validate.js";
 
 export type AdminSection = "reports" | "sites" | "setup" | "people";
@@ -50,6 +51,20 @@ function AdminHeader(props: { email: string; section?: AdminSection; sectionHome
   );
 }
 
+/** Tells portal owners, on every page, that a new version is waiting. Check my setup has the details. */
+function UpdateBanner(props: { section?: AdminSection; sectionHome?: boolean }) {
+  const update = useContext(UpdateContext);
+  if (!update?.latest || !updateAvailable(update) || (props.section === "setup" && props.sectionHome)) return null;
+  return (
+    <div class="notice">
+      <p>
+        <strong>An update is available:</strong> version {update.latest.version} (you have {update.current}).{" "}
+        <a href="/admin/setup#updates">See what's new and update</a>
+      </p>
+    </div>
+  );
+}
+
 export function AdminLayout(props: {
   title: string;
   email: string;
@@ -65,6 +80,7 @@ export function AdminLayout(props: {
       header={<AdminHeader email={props.email} section={props.section} sectionHome={props.sectionHome} />}
       wide
     >
+      <UpdateBanner section={props.section} sectionHome={props.sectionHome} />
       {props.children}
     </Layout>
   );

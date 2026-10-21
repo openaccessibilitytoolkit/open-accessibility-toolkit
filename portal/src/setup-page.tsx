@@ -3,9 +3,12 @@
 import { AdminLayout } from "./admin.js";
 import type { Site } from "./db.js";
 import type { TestEmailResult } from "./email.js";
+import { formatTime } from "./timeline.js";
+import { CHANGELOG_URL, updateAvailable, updateWorkflowUrl, type UpdateStatus } from "./updates.js";
 
 export const SETUP_GUIDE_URL =
   "https://github.com/openaccessibilitytoolkit/open-accessibility-toolkit/blob/main/docs/setup-guide.md";
+export const UPDATE_GUIDE_URL = `${SETUP_GUIDE_URL}#9-keep-your-portal-safe-and-up-to-date`;
 
 export type CheckState = "done" | "attention" | "unknown";
 
@@ -105,17 +108,144 @@ function Status(props: { state: CheckState }) {
   );
 }
 
+/** Where "Update my portal" goes: the owner's own update page on GitHub, or the guide until we know it. */
+export function updateHref(status: UpdateStatus): string {
+  return status.githubCopy ? updateWorkflowUrl(status.githubCopy) : UPDATE_GUIDE_URL;
+}
+
+export interface GithubCopyForm {
+  value: string;
+  error?: string;
+}
+
+function UpdateSection(props: {
+  update: UpdateStatus;
+  timeZone: string;
+  isOwner: boolean;
+  githubForm?: GithubCopyForm;
+}) {
+  const { update, githubForm } = props;
+  const available = updateAvailable(update);
+  const checked = update.latest && (
+    <> Last checked {formatTime(update.latest.checkedAt, props.timeZone)}.</>
+  );
+  const githubValue = githubForm?.value ?? (update.githubCopy ? `https://github.com/${update.githubCopy}` : "");
+  return (
+    <section aria-labelledby="updates">
+      <h2 id="updates">Updates</h2>
+      <ul class="checks">
+        <li>
+          {available && update.latest ? (
+            <>
+              <Status state="attention" /> Update available: version {update.latest.version} (you have {update.current})
+              {update.latest.notes.length > 0 && (
+                <>
+                  <p class="hint">What's new:</p>
+                  <ul>
+                    {update.latest.notes.map((n) => (
+                      <li>{n}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              <p class="hint">
+                <a href={CHANGELOG_URL}>See everything that changed</a>.{checked}
+              </p>
+            </>
+          ) : update.latest ? (
+            <>
+              <Status state="done" /> You're on the latest version ({update.current})
+              <p class="hint">
+                We check for updates once a day.{checked}
+              </p>
+            </>
+          ) : (
+            <>
+              <Status state="unknown" /> You have version {update.current}
+              <p class="hint">We haven't checked for updates yet. We check once a day, or you can check now.</p>
+            </>
+          )}
+        </li>
+      </ul>
+      {available && (
+        <>
+          <p>
+            <a class="button-link" href={updateHref(update)}>
+              Update my portal
+            </a>
+          </p>
+          <p class="hint">
+            {update.githubCopy
+              ? "This opens your portal's update page on GitHub. Click Run workflow, then the green Run workflow button. "
+              : "This opens the steps in the setup guide. To go straight to your update page next time, add your portal's GitHub address below. "}
+            Your portal updates in about two minutes, and your reports and settings stay as they are.
+          </p>
+        </>
+      )}
+      <form method="post" action="/admin/setup/check-updates">
+        <button type="submit" class="secondary-button">
+          Check for updates now
+        </button>
+      </form>
+
+      {props.isOwner && (
+        <form method="post" action="/admin/setup/github-copy" class="card" novalidate>
+          <div class="field">
+            <label for="github-copy">Your portal's GitHub address</label>
+            <p id="github-copy-hint" class="hint">
+              The address of your own copy of the portal on GitHub, like https://github.com/your-name/open-a11y-portal.
+              The Update my portal button opens its update page. Leave it empty to remove it.
+            </p>
+            {githubForm?.error && (
+              <p id="github-copy-error" class="error-message">
+                Error: {githubForm.error}
+              </p>
+            )}
+            <input
+              type="url"
+              id="github-copy"
+              name="github_copy"
+              value={githubValue}
+              autocomplete="url"
+              aria-invalid={githubForm?.error ? "true" : undefined}
+              aria-describedby={githubForm?.error ? "github-copy-hint github-copy-error" : "github-copy-hint"}
+              autofocus={!!githubForm?.error}
+            />
+          </div>
+          <button type="submit">Save GitHub address</button>
+        </form>
+      )}
+    </section>
+  );
+}
+
 export function SetupPage(props: {
   email: string;
   checks: Check[];
   footers: FooterCheck[];
   emailConnected: boolean;
   testResult?: TestEmailResult;
+  notice?: string;
+  update: UpdateStatus;
+  timeZone: string;
+  isOwner: boolean;
+  githubForm?: GithubCopyForm;
 }) {
   const attention = props.checks.filter((c) => c.state === "attention").length
-    + props.footers.filter((f) => f.state === "attention").length;
+    + props.footers.filter((f) => f.state === "attention").length
+    + (updateAvailable(props.update) ? 1 : 0);
   return (
-    <AdminLayout title="Check my setup" email={props.email} section="setup" sectionHome>
+    <AdminLayout
+      title={`${props.githubForm?.error ? "Error: " : ""}Check my setup`}
+      email={props.email}
+      section="setup"
+      sectionHome
+    >
+      {props.notice && (
+        <div class="saved" tabindex={-1} autofocus>
+          <p>{props.notice}</p>
+        </div>
+      )}
       {props.testResult && (
         <div class={props.testResult.ok ? "saved" : "error-summary"} tabindex={-1} autofocus>
           <p>{props.testResult.message}</p>
@@ -169,6 +299,8 @@ export function SetupPage(props: {
           </ul>
         </>
       )}
+
+      <UpdateSection update={props.update} timeZone={props.timeZone} isOwner={props.isOwner} githubForm={props.githubForm} />
     </AdminLayout>
   );
 }

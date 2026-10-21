@@ -73,10 +73,10 @@ const styles = `
   .field:first-child { margin-top: 0; }
   label, legend { display: block; font-weight: 600; }
   .hint { color: var(--muted); margin: 0.25rem 0 0.5rem; }
-  input[type=text], input[type=email], input[type=number], textarea, select {
+  input[type=text], input[type=email], input[type=url], input[type=number], textarea, select {
     width: 100%; font: inherit; color: var(--text); background: var(--surface); padding: 0.6rem 0.75rem;
     border: 2px solid var(--border); border-radius: 8px; }
-  input[type=text]:focus-visible, input[type=email]:focus-visible, input[type=number]:focus-visible,
+  input[type=text]:focus-visible, input[type=email]:focus-visible, input[type=url]:focus-visible, input[type=number]:focus-visible,
   textarea:focus-visible, select:focus-visible {
     border-color: var(--focus); }
   textarea { min-height: 9rem; resize: vertical; }
@@ -152,7 +152,7 @@ const styles = `
 
   /* Check my setup */
   .checks { list-style: none; padding: 0; }
-  .checks li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  .checks > li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
                box-shadow: var(--shadow); padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
   .checks .hint { margin-bottom: 0; }
   .status { display: inline-block; font-size: 0.9rem; padding: 0.1rem 0.65rem; border-radius: 999px;

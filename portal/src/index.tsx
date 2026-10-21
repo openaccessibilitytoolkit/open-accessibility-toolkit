@@ -11,6 +11,7 @@ import { Message, ReportForm, ThankYou } from "./pages.js";
 import { RATE_LIMIT, looksAutomated, visitorKey } from "./safeguards.js";
 import { hashSalt } from "./settings.js";
 import { StatementPage } from "./statement.js";
+import { refreshLatestVersion } from "./updates.js";
 import { validateReport } from "./validate.js";
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -154,5 +155,7 @@ export default {
   fetch: app.fetch,
   async scheduled(_controller, env, ctx) {
     ctx.waitUntil(runMonthlyReview(env, new Date()));
+    // Once a day, see whether there's a new version, so owners can be told in the portal.
+    ctx.waitUntil(refreshLatestVersion(env.DB, new Date()));
   },
 } satisfies ExportedHandler<Bindings>;
