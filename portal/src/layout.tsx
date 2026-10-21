@@ -121,6 +121,10 @@ const styles = `
   .filters > div { min-width: 0; max-width: 100%; }
   .card.table-card { padding: 0; overflow-x: auto; }
   .table-card table { min-width: 54rem; }
+  /* A table inside a card: fits the card, and scrolls sideways only on narrow screens. */
+  .table-scroll { overflow-x: auto; margin: 0 -0.25rem; }
+  .table-scroll table { min-width: 30rem; }
+  .table-scroll td { overflow-wrap: anywhere; }
   table { border-collapse: collapse; width: 100%; }
   caption { text-align: left; font-weight: 600; padding: 1rem 1.25rem 0.75rem; }
   th, td { text-align: left; vertical-align: top; padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--line); }

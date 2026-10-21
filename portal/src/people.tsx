@@ -169,9 +169,9 @@ export function PeoplePage(props: {
           {props.people.length === 0 ? (
             <p>Nobody yet. Add someone below.</p>
           ) : (
-            <div class="table-card" role="region" aria-label="People you've added" tabindex={0}>
+            <div class="table-scroll" role="region" aria-label="People you've added" tabindex={0}>
               <table>
-                <caption>People you've added</caption>
+                <caption class="visually-hidden">People you've added</caption>
                 <thead>
                   <tr>
                     <th scope="col">Email</th>
