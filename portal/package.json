@@ -1,6 +1,6 @@
 {
   "name": "open-a11y-portal",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Free, self-hosted portal for accessibility problem reports. Runs on Cloudflare Workers and D1.",
   "license": "MIT",
   "private": true,

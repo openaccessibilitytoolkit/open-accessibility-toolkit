@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 1.4.1 (2026-10-21)
+
+**Portal owners: press "Update my portal" to get this release** (see
+[Keep your portal safe and up to date](docs/setup-guide.md#9-keep-your-portal-safe-and-up-to-date)).
 
 - **Clearer: saving your portal's GitHub address.** A green "Saved" check now shows right
   in the GitHub address box, and after you click **Save GitHub address** the page stays on
