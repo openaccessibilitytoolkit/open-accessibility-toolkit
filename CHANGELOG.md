@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.3.0 (2026-10-20)
+
+**Portal owners: press "Update my portal" to get this release** (see
+[Keep your portal safe and up to date](docs/setup-guide.md#9-keep-your-portal-safe-and-up-to-date)).
+It's the last time you'll need to go to GitHub to find out about an update. Then open
+**Check my setup** and save your portal's GitHub address under **Updates**.
 
 - **New: Update my portal, from the portal.** Your portal checks once a day for a new
   version. Owners see **An update is available** at the top of every page, and **Check my
